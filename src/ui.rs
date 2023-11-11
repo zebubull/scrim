@@ -17,7 +17,7 @@ fn get_top_bar<'a>(app: &mut App) -> Paragraph<'a> {
     let mut items = vec![
         colored_span!(format!("Name: {: <24}", app.player.name), Color::Yellow),
         separator!(Color::Yellow),
-        colored_span!(format!("Background: {: <14}", app.player.background), Color::Yellow),
+        colored_span!(format!("Race: {: <10}", app.player.race), Color::Yellow),
         separator!(Color::Yellow),
         colored_span!(format!("Level: {: <2}", app.player.level), Color::Yellow),
         separator!(Color::Yellow),
@@ -27,7 +27,7 @@ fn get_top_bar<'a>(app: &mut App) -> Paragraph<'a> {
     ];
 
     if let Some(Selected::TopBarItem(item)) = app.selected {
-        items[item as usize * 2].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightRed} else {Color::Yellow});
+        items[item as usize * 2].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightGreen} else {Color::Yellow});
     }
     
     Paragraph::new(vec![Line::from(items)])
@@ -53,12 +53,32 @@ fn get_stat_block<'a>(app: &mut App) -> Paragraph<'a> {
     ];
 
     if let Some(Selected::StatItem(item)) = app.selected {
-        lines[item as usize * 2].spans[0].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightRed} else {Color::Yellow});
+        lines[item as usize * 2].spans[0].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightGreen} else {Color::Yellow});
     }
 
     Paragraph::new(lines)
         .block(Block::new()
             .title("Stats").title_alignment(Alignment::Center)
+            .borders(Borders::ALL))
+        .alignment(Alignment::Left)
+}
+
+fn get_info_block<'a>(app: &mut App) -> Paragraph<'a> {
+    let mut lines = vec![
+        Line::from(vec![
+            colored_span!(format!("Hit dice: {}d{}", app.player.hit_dice_remaining, app.player.hit_dice), Color::Yellow),
+            separator!(Color::Yellow),
+            colored_span!(format!("Background: {}", app.player.background), Color::Yellow),
+        ]),
+    ];
+
+    if let Some(Selected::InfoItem(item)) = app.selected {
+        lines[0].spans[item as usize * 2].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightGreen} else {Color::Yellow});
+    }
+
+    Paragraph::new(lines)
+        .block(Block::new()
+            .title("Info").title_alignment(Alignment::Center)
             .borders(Borders::ALL))
         .alignment(Alignment::Left)
 }
@@ -91,4 +111,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
 
     let stat_block = get_stat_block(app);
     f.render_widget(stat_block, statchunk[0]);
+
+    let info_block = get_info_block(app);
+    f.render_widget(info_block, hchunks[1]);
 }

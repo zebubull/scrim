@@ -54,7 +54,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     KeyCode::Enter => { app.editing = true; },
                     _ => {}
                 }
-            }
+            },
             Some(Selected::StatItem(idx)) => {
                 match key_event.code {
                     KeyCode::Char('k') => { 
@@ -68,11 +68,26 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     KeyCode::Enter => { app.editing = true; },
                     _ => {}
                 }
+            },
+            Some(Selected::InfoItem(idx)) => {
+                match key_event.code {
+                    KeyCode::Char('h') => { 
+                        let idx = max(0, idx - 1);
+                        app.selected = Some(Selected::InfoItem(idx));
+                    },
+                    KeyCode::Char('l') => {
+                        let idx = min(1, idx + 1);
+                        app.selected = Some(Selected::InfoItem(idx));
+                    },
+                    KeyCode::Enter => { app.editing = true; },
+                    _ => {}
+                }
             }
             None => {
                 match key_event.code {
                     KeyCode::Char('b') => app.selected = Some(Selected::TopBarItem(0)),
                     KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
+                    KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                     _ => {}
                 }
             }

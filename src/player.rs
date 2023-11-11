@@ -1,19 +1,15 @@
-use std::fmt::Display;
-
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-pub trait Scrollable {
-    fn next(self) -> Self;
-    fn prev(self) -> Self;
-}
+use serde_derive::{Serialize, Deserialize};
+use strum_macros::{Display, EnumCount};
 
-#[derive(Debug, Clone, Copy, Default, FromPrimitive)]
+#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
 pub enum Class {
+    #[default]
+    Artificer,
     Bard,
     Barbarian,
     Cleric,
     Druid,
-    #[default]
     Fighter,
     Monk,
     Paladin,
@@ -24,38 +20,9 @@ pub enum Class {
     Wizard,
 }
 
-impl Display for Class {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let text = match self {
-            Self::Bard => "Bard",
-            Self::Barbarian => "Barbarian",
-            Self::Cleric => "Cleric",
-            Self::Druid => "Druid",
-            Self::Fighter => "Fighter",
-            Self::Monk => "Monk",
-            Self::Paladin => "Paladin",
-            Self::Ranger => "Ranger",
-            Self::Rogue => "Rogue",
-            Self::Sorcerer => "Sorcerer",
-            Self::Warlock => "Warlock",
-            Self::Wizard => "Wizard",
-        };
+crate::impl_cycle!(Class);
 
-        write!(f, "{}", text)
-    }
-}
-
-impl Scrollable for Class {
-    fn next(self) -> Class {
-        FromPrimitive::from_u8(std::cmp::min(self as u8 + 1, 11)).unwrap()
-    }
-
-    fn prev(self) -> Class {
-        FromPrimitive::from_u8(std::cmp::max(self as i8 - 1, 0) as u8).unwrap()
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default, FromPrimitive)]
+#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
 pub enum Alignment {
     LG,
     LN,
@@ -69,35 +36,47 @@ pub enum Alignment {
     CE,
 }
 
-impl Display for Alignment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let text = match self {
-            Self::LG => "LG",
-            Self::LN => "LN",
-            Self::LE => "LE",
-            Self::NG => "NG",
-            Self::TN => "TN",
-            Self::NE => "NE",
-            Self::CG => "CG",
-            Self::CN => "CN",
-            Self::CE => "CE",
-        };
+crate::impl_cycle!(Alignment);
 
-        write!(f, "{}", text)
-    }
+#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+pub enum Race {
+    Dragonborn,
+    Dwarf,
+    Elf,
+    Gnome,
+    HalfElf,
+    HalfOrc,
+    Halfling,
+    #[default]
+    Human,
+    Tiefling,
 }
 
-impl Scrollable for Alignment {
-    fn next(self) -> Alignment {
-        FromPrimitive::from_u8(std::cmp::min(self as u8 + 1, 8)).unwrap()
-    }
+crate::impl_cycle!(Race);
 
-    fn prev(self) -> Alignment {
-        FromPrimitive::from_u8(std::cmp::max(self as i8 - 1, 0) as u8).unwrap()
-    }
+#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+pub enum Background {
+    #[default]
+    Acolyte,
+    Charlatan,
+    Criminal,
+    Entertainer,
+    FolkHero,
+    GuildArtisan,
+    Hermit,
+    Knight,
+    Noble,
+    Outlander,
+    Pirate,
+    Sage,
+    Sailor,
+    Soldier,
+    Urchin,
 }
 
-#[derive(Debug)]
+crate::impl_cycle!(Background);
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
     pub strength: u8,
     pub dexterity: u8,
@@ -120,12 +99,49 @@ impl Default for Stats {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Player {
     pub name: String,
     pub class: Class,
     pub level: u8,
-    pub background: String,
+    pub background: Background,
     pub alignment: Alignment,
     pub stats: Stats,
+    pub hit_dice: u8,
+    pub hit_dice_remaining: u8,
+    pub race: Race,
+}
+
+impl Player {
+    /// Recalculate all class dependant values
+    pub fn recalculate_class(&mut self) {
+        use Class::*;
+        self.hit_dice = match self.class {
+            Sorcerer | Wizard => 6,
+            Artificer | Bard | Cleric | Druid | Monk | Rogue | Warlock => 8,
+            Fighter | Paladin | Ranger => 10,
+            Barbarian => 12,
+        };
+    }
+
+    /// Recalculate all level dependant values
+    pub fn recalculate_level(&mut self) {
+        self.hit_dice_remaining = std::cmp::min(self.level, self.hit_dice_remaining + 1);
+    }
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            level: 1,
+            hit_dice: 8,
+            hit_dice_remaining: 1,
+            name: String::default(),
+            class: Class::default(),
+            background: Background::default(),
+            alignment: Alignment::default(),
+            stats: Stats::default(),
+            race: Race::default(),
+        }
+    }
 }
