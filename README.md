@@ -4,9 +4,9 @@
 ## Use
 The `scrim` binary can be installed locally to your machine by running `cargo install --path .`. With `scrim` installed, you can run  
 ```
-scrim ...
+scrim [player]
 ```
-to launch a `scrim` session. If a player name is passed, then `scrim` will attempt to load the specified player file. Spaces do not need to be escaped; `scrim` will automatically add spaces to the player name where necessary.
+to launch a `scrim` session. If a player name is passed, then `scrim` will attempt to load the specified player file.
 
 ## Controls
 - `b` - highlight the top bar.

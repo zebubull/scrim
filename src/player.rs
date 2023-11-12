@@ -83,11 +83,17 @@ crate::impl_cycle!(Background);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
+    #[serde(default)]
     pub strength: u8,
+    #[serde(default)]
     pub dexterity: u8,
+    #[serde(default)]
     pub constitution: u8,
+    #[serde(default)]
     pub intelligence: u8,
+    #[serde(default)]
     pub wisdom: u8,
+    #[serde(default)]
     pub charisma: u8
 }
 
@@ -104,24 +110,42 @@ impl Default for Stats {
     }
 }
 
+// I do not know of a better way to do this
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Player {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub class: Class,
+    #[serde(default)]
     pub level: u8,
+    #[serde(default)]
     pub background: Background,
+    #[serde(default)]
     pub alignment: Alignment,
+    #[serde(default)]
     pub stats: Stats,
+    #[serde(default)]
     pub hit_dice: u8,
+    #[serde(default)]
     pub hit_dice_remaining: u8,
+    #[serde(default)]
     pub race: Race,
+    #[serde(default)]
     pub inventory: Vec<String>,
+    #[serde(default)]
     pub notes: Vec<String>,
+    #[serde(default)]
     pub spells: Vec<String>,
+    #[serde(default)]
     pub hp: u16,
+    #[serde(default)]
     pub ac: u8,
+    #[serde(default)]
     pub temp_hp: u16,
+    #[serde(default)]
     pub max_hp: u16,
+    #[serde(default)]
     pub prof_bonus: u8,
 }
 

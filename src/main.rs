@@ -31,8 +31,7 @@ fn main() -> Result<()> {
 
     // Load player data
     if path.is_some() {
-        let file = &format!("{}.player", path.as_ref().unwrap());
-        let path = Path::new(file);
+        let path = Path::new(path.as_ref().unwrap());
         if path.exists() {
             app.load_player(path)?;
         }

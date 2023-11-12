@@ -23,7 +23,7 @@ pub enum Tab {
     #[default]
     Notes,
     Inventory,
-    Spells
+    Spells,
 }
 
 #[derive(Debug, Default)]
@@ -51,16 +51,14 @@ impl App {
     pub fn load_player(&mut self, path: &Path) -> Result<()> {
         let data = std::fs::read(path)
             .wrap_err_with(|| format!("failed to load player from file `{}`", path.to_string_lossy()))?;
-        match serde_json::from_slice(data.as_slice()) {
-            Ok(player) => self.player = player,
-            _ => {},
-        };
+        self.player = serde_json::from_slice(data.as_slice())
+            .wrap_err_with(|| format!("player file `{}` could not be loaded, it may be corrupt", path.to_string_lossy()))?;
         Ok(())
     }
 
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
-        let path = format!("{}.player", self.path.as_ref().unwrap_or(&self.player.name));
+        let path = format!("{}", self.path.as_ref().unwrap_or(&self.player.name));
         std::fs::write(path, data)?;
         Ok(())
     }
