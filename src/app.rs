@@ -191,7 +191,7 @@ impl App {
             },
             Some(Selected::StatItem(_)) => Some(ControlType::NextPrev),
             Some(Selected::InfoItem(idx)) => match idx {
-                0 | 1 | 2 | 3 | 4 | 5 => Some(ControlType::NextPrev),
+                0 | 1 | 2 | 3 | 4 | 5 | 6 => Some(ControlType::NextPrev),
                 _ => unreachable!(),
             },
             Some(Selected::TabItem(_)) => Some(ControlType::TextInput),
