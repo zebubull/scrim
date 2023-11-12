@@ -291,7 +291,7 @@ impl App {
             },
             Some(Selected::TopBarItem(item)) => {
                 match item {
-                    1 => self.player.race = self.player.race.prev(),
+                    1 => self.player.race = self.player.race.next(),
                     2 => { self.player.level = self.player.level.checked_sub(1).unwrap_or(0); self.player.recalculate_level(); },
                     // Reverse these two for more natural scrolling
                     3 => {self.player.class = self.player.class.next(); self.player.recalculate_class(); },
