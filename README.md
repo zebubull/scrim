@@ -2,7 +2,7 @@
 `scrim`, The **S**uper **C**ool **R**ust **I**tem **M**anager, simple dnd character manager written in rust, with vim-inspired tui controls for easy (if you know vim) editing.
 
 ## Use
-The `scrim` binary can be install locally to your machine by running `cargo install --path .`. With `scrim` installed, you can run  
+The `scrim` binary can be installed locally to your machine by running `cargo install --path .`. With `scrim` installed, you can run  
 ```
 scrim ...
 ```
