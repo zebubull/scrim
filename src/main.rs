@@ -25,7 +25,7 @@ fn main() -> Result<()> {
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
-    app.update_viewport_height(terminal.size()?.height);
+    app.update_viewport_height(terminal.size()?.height)?;
     let events = EventHandler::new(1000 / 30);
     let mut tui = Tui::new(terminal, events);
 
@@ -45,7 +45,7 @@ fn main() -> Result<()> {
             Event::Tick => tui.draw(&mut app)?,
             Event::Key(key_event) => update(&mut app, key_event)?,
             Event::Mouse(_) => {},
-            Event::Resize(_, y) => app.update_viewport_height(y),
+            Event::Resize(_, y) => app.update_viewport_height(y)?,
         };
     }
 

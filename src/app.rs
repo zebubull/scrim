@@ -63,14 +63,19 @@ impl App {
         Ok(())
     }
 
-    pub fn update_viewport_height(&mut self, height: u16) {
+    pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
         // tab frame size
         self.viewport_height = height - 10;
+        self.update_scroll()?;
+        Ok(())
     }
 
     pub fn update_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.vscroll = std::cmp::min(self.vscroll, self.current_tab_len().checked_sub(self.viewport_height as usize).unwrap_or(0) as u16);
+        if let Some(Selected::TabItem(idx)) = self.selected {
+            self.selected = Some(Selected::TabItem(std::cmp::min(idx, self.current_tab_len() as i16)));
+        }
     }
 
     pub fn can_edit_tab(&self) -> bool {
@@ -167,7 +172,7 @@ impl App {
 
         let selected = match self.selected {
             Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot scroll without tab selected")),
+            _ => 0,
         } as u16;
 
         if len < self.viewport_height || selected < self.viewport_height {
