@@ -41,12 +41,17 @@ crate::impl_cycle!(Alignment);
 #[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
 pub enum Race {
     Dragonborn,
-    Dwarf,
-    Elf,
-    Gnome,
+    HillDwarf,
+    MountainDwarf,
+    HighElf,
+    WoodElf,
+    DarkElf,
+    ForestGnome,
+    RockGnome,
     HalfElf,
     HalfOrc,
-    Halfling,
+    LightfootHalfling,
+    StoutHalfling,
     #[default]
     Human,
     Tiefling,
@@ -110,6 +115,13 @@ pub struct Player {
     pub hit_dice: u8,
     pub hit_dice_remaining: u8,
     pub race: Race,
+    pub inventory: Vec<String>,
+    pub notes: Vec<String>,
+    pub spells: Vec<String>,
+    pub hp: u16,
+    pub ac: u8,
+    pub temp_hp: u16,
+    pub max_hp: u16,
 }
 
 impl Player {
@@ -142,6 +154,13 @@ impl Default for Player {
             alignment: Alignment::default(),
             stats: Stats::default(),
             race: Race::default(),
+            inventory: vec![],
+            notes: vec![],
+            spells: vec![],
+            hp: 0,
+            ac: 0,
+            temp_hp: 0,
+            max_hp: 0,
         }
     }
 }

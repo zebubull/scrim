@@ -1,17 +1,29 @@
+use std::path::Path;
+
 use crate::{player::Player, Cycle};
 use color_eyre::eyre::{eyre, Result, WrapErr};
+use strum_macros::Display;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Selected {
     TopBarItem(i8),
     StatItem(i8),
     InfoItem(i8),
+    TabItem(i16),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum ControlType {
     TextInput,
     NextPrev,
+}
+
+#[derive(Debug, Clone, Copy, Default, Display)]
+pub enum Tab {
+    #[default]
+    Notes,
+    Inventory,
+    Spells
 }
 
 #[derive(Debug, Default)]
@@ -21,6 +33,10 @@ pub struct App {
     pub editing: bool,
     pub selected: Option<Selected>,
     pub control_type: Option<ControlType>,
+    pub vscroll: u16,
+    pub viewport_height: u16,
+    pub current_tab: Tab,
+    pub path: Option<String>,
 }
 
 impl App {
@@ -32,13 +48,136 @@ impl App {
         self.should_quit = true;
     }
 
-    pub fn load_player(&mut self, path: &str) -> Result<()> {
+    pub fn load_player(&mut self, path: &Path) -> Result<()> {
         let data = std::fs::read(path)
-            .wrap_err_with(|| format!("failed to load player from file `{}`", path))?;
+            .wrap_err_with(|| format!("failed to load player from file `{}`", path.to_string_lossy()))?;
         match serde_json::from_slice(data.as_slice()) {
             Ok(player) => self.player = player,
             _ => {},
         };
+        Ok(())
+    }
+
+    pub fn save_player(&self) -> Result<()> {
+        let data = serde_json::to_string(&self.player)?;
+        let path = format!("{}.player", self.path.as_ref().unwrap_or(&self.player.name));
+        std::fs::write(path, data)?;
+        Ok(())
+    }
+
+    pub fn update_viewport_height(&mut self, height: u16) {
+        // tab frame size
+        self.viewport_height = height - 10;
+    }
+
+    pub fn update_tab(&mut self, tab: Tab) {
+        self.current_tab = tab;
+        self.vscroll = std::cmp::min(self.vscroll, self.current_tab_len().checked_sub(self.viewport_height as usize).unwrap_or(0) as u16);
+    }
+
+    pub fn can_edit_tab(&self) -> bool {
+        self.current_tab_len() != 0
+    }
+
+    pub fn current_tab_len(&self) -> usize {
+        use Tab::*;
+        match self.current_tab {
+            Notes => self.player.notes.len(),
+            Inventory => self.player.inventory.len(),
+            Spells => self.player.spells.len(),
+        }
+    }
+
+    pub fn add_item_to_tab(&mut self) -> Result<()> {
+        use Tab::*;
+        match self.current_tab {
+            Notes => {
+                self.selected = Some(Selected::TabItem(self.player.notes.len() as i16));
+                self.player.notes.push(String::from(" "));
+            },
+            Inventory => {
+                self.selected = Some(Selected::TabItem(self.player.inventory.len() as i16));
+                self.player.inventory.push(String::from(" "));
+            },
+            Spells => {
+                self.selected = Some(Selected::TabItem(self.player.spells.len() as i16));
+                self.player.spells.push(String::from(" "));
+            },
+        }
+
+        self.update_scroll()?;
+        Ok(())
+    }
+
+    pub fn insert_item_to_tab(&mut self) -> Result<()> {
+        use Tab::*;
+        let item = match self.selected {
+            Some(Selected::TabItem(item)) => item,
+            _ => return Err(eyre!("cannot insert while not a tab is not selected")),
+        } as usize;
+
+        match self.current_tab {
+            Notes => {
+                self.player.notes.insert(item, String::from(" "));
+            },
+            Inventory => {
+                self.player.inventory.insert(item, String::from(" "));
+            },
+            Spells => {
+                self.player.spells.insert(item, String::from(" "));
+            },
+        }
+
+        self.update_scroll()?;
+        Ok(())
+    }
+
+    pub fn delete_item_from_tab(&mut self) -> Result<()> {
+        use Tab::*;
+        let item = match self.selected {
+            Some(Selected::TabItem(item)) => item,
+            _ => return Err(eyre!("cannot insert while not a tab is not selected")),
+        } as usize;
+
+        match self.current_tab {
+            Notes => {
+                self.player.notes.remove(item);
+                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.notes.len() - 1, item) as i16));
+            },
+            Inventory => {
+                self.player.inventory.remove(item);
+                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.inventory.len() - 1, item) as i16));
+            },
+            Spells => {
+                self.player.spells.remove(item);
+                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.spells.len() - 1, item) as i16));
+            },
+        }
+
+        self.update_scroll()?;
+        Ok(())
+
+    }
+
+    pub fn update_scroll(&mut self) -> Result<()> {
+        use Tab::*;
+        let len = match self.current_tab {
+            Notes => self.player.notes.len(),
+            Inventory => self.player.inventory.len(),
+            Spells => self.player.spells.len(),
+        } as u16;
+
+        let selected = match self.selected {
+            Some(Selected::TabItem(item)) => item,
+            _ => return Err(eyre!("cannot scroll without tab selected")),
+        } as u16;
+
+        if len < self.viewport_height || selected < self.viewport_height {
+            self.vscroll = 0;
+        } else {
+            self.vscroll = selected - self.viewport_height + 1;
+        }
+
         Ok(())
     }
 
@@ -52,9 +191,10 @@ impl App {
             },
             Some(Selected::StatItem(_)) => Some(ControlType::NextPrev),
             Some(Selected::InfoItem(idx)) => match idx {
-                0 | 1 => Some(ControlType::NextPrev),
+                0 | 1 | 2 | 3 | 4 | 5 => Some(ControlType::NextPrev),
                 _ => unreachable!(),
             },
+            Some(Selected::TabItem(_)) => Some(ControlType::TextInput),
         }
     }
 
@@ -68,13 +208,21 @@ impl App {
                     0 => Ok(&mut self.player.name),
                     _ => Err(eyre!("selected control has no underlying string")),
                 }
+            },
+            Some(Selected::TabItem(item)) => {
+                use Tab::*;
+                match self.current_tab {
+                    Notes => Ok(&mut self.player.notes[item as usize]),
+                    Inventory => Ok(&mut self.player.inventory[item as usize]),
+                    Spells => Ok(&mut self.player.spells[item as usize]),
+                }
             }
         }
     }
 
     pub fn cycle_current_next(&mut self) -> Result<()> {
         match self.selected {
-            None => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => self.player.stats.strength = std::cmp::min(20, self.player.stats.strength + 1),
@@ -88,9 +236,13 @@ impl App {
             },
             Some(Selected::InfoItem(item)) => {
                 match item {
-                    0 => self.player.hit_dice_remaining = std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1),
+                    0 => self.player.hp = std::cmp::min(self.player.max_hp, self.player.hp + 1),
+                    1 => self.player.max_hp += 1,
+                    2 => self.player.temp_hp += 1,
+                    3 => self.player.ac += std::cmp::min(self.player.ac + 1, 20),
+                    4 => self.player.hit_dice_remaining = std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1),
                     // Reverse for more natural scrolling
-                    1 => self.player.background = self.player.background.prev(),
+                    5 => self.player.background = self.player.background.prev(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
             },
@@ -111,7 +263,7 @@ impl App {
 
     pub fn cycle_current_prev(&mut self) -> Result<()> {
         match self.selected {
-            None => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => self.player.stats.strength = self.player.stats.strength.checked_sub(1).unwrap_or(0),
@@ -125,9 +277,13 @@ impl App {
             },
             Some(Selected::InfoItem(item)) => {
                 match item {
-                    0 => self.player.hit_dice_remaining = self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0),
+                    0 => self.player.hp = self.player.hp.checked_sub(1).unwrap_or(0),
+                    1 => self.player.max_hp = self.player.max_hp.checked_sub(1).unwrap_or(0),
+                    2 => self.player.temp_hp = self.player.temp_hp.checked_sub(1).unwrap_or(0),
+                    3 => self.player.ac = self.player.ac.checked_sub(1).unwrap_or(0),
+                    4 => self.player.hit_dice_remaining = self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0),
                     // Reverse for more natural scrolling
-                    1 => self.player.background = self.player.background.next(),
+                    5 => self.player.background = self.player.background.next(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
             },
