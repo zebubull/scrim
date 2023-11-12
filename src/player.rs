@@ -122,6 +122,7 @@ pub struct Player {
     pub ac: u8,
     pub temp_hp: u16,
     pub max_hp: u16,
+    pub prof_bonus: u8,
 }
 
 impl Player {
@@ -161,6 +162,7 @@ impl Default for Player {
             ac: 0,
             temp_hp: 0,
             max_hp: 0,
+            prof_bonus: 0,
         }
     }
 }

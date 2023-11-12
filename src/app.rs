@@ -239,10 +239,11 @@ impl App {
                     0 => self.player.hp = std::cmp::min(self.player.max_hp, self.player.hp + 1),
                     1 => self.player.max_hp += 1,
                     2 => self.player.temp_hp += 1,
-                    3 => self.player.ac += std::cmp::min(self.player.ac + 1, 20),
-                    4 => self.player.hit_dice_remaining = std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1),
+                    3 => self.player.ac = std::cmp::min(self.player.ac + 1, 20),
+                    4 => self.player.prof_bonus += 1,
+                    5 => self.player.hit_dice_remaining = std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1),
                     // Reverse for more natural scrolling
-                    5 => self.player.background = self.player.background.prev(),
+                    6 => self.player.background = self.player.background.prev(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
             },
@@ -281,9 +282,10 @@ impl App {
                     1 => self.player.max_hp = self.player.max_hp.checked_sub(1).unwrap_or(0),
                     2 => self.player.temp_hp = self.player.temp_hp.checked_sub(1).unwrap_or(0),
                     3 => self.player.ac = self.player.ac.checked_sub(1).unwrap_or(0),
-                    4 => self.player.hit_dice_remaining = self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0),
+                    4 => self.player.prof_bonus = self.player.prof_bonus.checked_sub(1).unwrap_or(0),
+                    5 => self.player.hit_dice_remaining = self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0),
                     // Reverse for more natural scrolling
-                    5 => self.player.background = self.player.background.next(),
+                    6 => self.player.background = self.player.background.next(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
             },

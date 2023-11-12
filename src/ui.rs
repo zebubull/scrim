@@ -64,7 +64,7 @@ fn get_stat_block<'a>(app: &mut App) -> Paragraph<'a> {
     ];
 
     if let Some(Selected::StatItem(item)) = app.selected {
-        lines[item as usize * 2].spans[0].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightGreen} else {Color::Yellow});
+        lines[item as usize * 3].spans[0].style = Style::default().fg(Color::Black).bg(if app.editing {Color::LightGreen} else {Color::Yellow});
     }
 
     Paragraph::new(lines)
@@ -84,6 +84,8 @@ fn get_info_block<'a>(app: &mut App) -> Paragraph<'a> {
             colored_span!(format!("Temp HP: {}", app.player.temp_hp), Color::Yellow),
             separator!(Color::Yellow),
             colored_span!(format!("AC: {}", app.player.ac), Color::Yellow),
+            separator!(Color::Yellow),
+            colored_span!(format!("Prof: {:+}", app.player.prof_bonus), Color::Yellow),
             separator!(Color::Yellow),
             colored_span!(format!("Hit dice: {}d{}", app.player.hit_dice_remaining, app.player.hit_dice), Color::Yellow),
             separator!(Color::Yellow),
