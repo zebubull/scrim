@@ -15,7 +15,7 @@ macro_rules! colored_span {
 
 fn get_top_bar<'a>(app: &mut App) -> Paragraph<'a> {
     let mut items = vec![
-        colored_span!(format!("Name: {: <24}", app.player.name), Color::Yellow),
+        colored_span!(format!("Name: {: <5}", app.player.name), Color::Yellow),
         separator!(Color::Yellow),
         colored_span!(format!("Race: {: <10}", app.player.race), Color::Yellow),
         separator!(Color::Yellow),
