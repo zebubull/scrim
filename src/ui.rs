@@ -1,6 +1,9 @@
 use ratatui::{
-    layout::{Rect, Alignment},
-    prelude::{Constraint, Direction, Frame, Layout}, widgets::{Paragraph, Block, Borders, BorderType}, style::{Color, Style}, text::Line,
+    layout::{Alignment, Rect},
+    prelude::{Constraint, Direction, Frame, Layout},
+    style::{Color, Style},
+    text::Line,
+    widgets::{Block, BorderType, Borders, Paragraph},
 };
 
 use crate::{
@@ -43,14 +46,15 @@ fn show_quit_popup(f: &mut Frame) {
     clear_rect(f, chunk);
 
     let text = Paragraph::new("y - yes (save)\nq - yes (don't save)\nn - no")
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .title("Really quit?")
-            .title_alignment(Alignment::Center))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .title("Really quit?")
+                .title_alignment(Alignment::Center),
+        )
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::Black).bg(Color::Yellow));
-
 
     f.render_widget(text, chunk);
 }

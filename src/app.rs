@@ -244,7 +244,9 @@ impl App {
 
     pub fn cycle_current_next(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => {
+                return Err(eyre!("no control is selected"))
+            }
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {
@@ -312,7 +314,9 @@ impl App {
 
     pub fn cycle_current_prev(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => {
+                return Err(eyre!("no control is selected"))
+            }
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {

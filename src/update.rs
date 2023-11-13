@@ -136,8 +136,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     app.quit();
                 },
                 _ => {}
-
-            }
+            },
             None => match key_event.code {
                 KeyCode::Char('b') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
