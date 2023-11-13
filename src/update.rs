@@ -35,10 +35,6 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
         };
     } else {
         match key_event.code {
-            KeyCode::Char('q') => {
-                app.should_quit = true;
-                return Ok(());
-            }
             KeyCode::Esc => {
                 app.selected = None;
                 return Ok(());
@@ -129,11 +125,25 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 }
                 _ => {}
             },
+            Some(Selected::Quitting) => match key_event.code {
+                KeyCode::Char('n') => app.selected = None,
+                KeyCode::Char('q') => app.quit(),
+                KeyCode::Char('y') => {
+                    if app.player.name.is_empty() {
+                        app.player.name = String::from("player");
+                    }
+                    app.save_player()?;
+                    app.quit();
+                },
+                _ => {}
+
+            }
             None => match key_event.code {
                 KeyCode::Char('b') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll as i16)),
+                KeyCode::Char('q') => app.selected = Some(Selected::Quitting),
                 KeyCode::Char('k') => {
                     app.vscroll = app.vscroll.checked_sub(1).unwrap_or(0);
                 }

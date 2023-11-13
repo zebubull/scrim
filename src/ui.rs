@@ -1,6 +1,6 @@
 use ratatui::{
-    layout::Rect,
-    prelude::{Constraint, Direction, Frame, Layout},
+    layout::{Rect, Alignment},
+    prelude::{Constraint, Direction, Frame, Layout}, widgets::{Paragraph, Block, Borders, BorderType}, style::{Color, Style}, text::Line,
 };
 
 use crate::{
@@ -14,22 +14,45 @@ fn get_popup_rect((width, height): (u16, u16), parent: Rect) -> Rect {
     let hpart = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
-            Constraint::Min(1),
+            Constraint::Percentage((100 - width) / 2),
             Constraint::Percentage(width),
-            Constraint::Min(1),
+            Constraint::Percentage((100 - width) / 2),
         ])
         .split(parent);
 
     let vpart = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
-            Constraint::Min(1),
+            Constraint::Percentage((100 - height) / 2),
             Constraint::Percentage(height),
-            Constraint::Min(1),
+            Constraint::Percentage((100 - height) / 2),
         ])
         .split(hpart[1]);
 
     vpart[1]
+}
+
+fn clear_rect(f: &mut Frame, rect: Rect) {
+    let s = " ".repeat(rect.width as usize);
+    let lines: Vec<Line> = (0..rect.height).map(|_| Line::from(s.clone())).collect();
+    f.render_widget(Paragraph::new(lines), rect);
+}
+
+fn show_quit_popup(f: &mut Frame) {
+    let chunk = get_popup_rect((25, 25), f.size());
+    clear_rect(f, chunk);
+
+    let text = Paragraph::new("y - yes (save)\nq - yes (don't save)\nn - no")
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .title("Really quit?")
+            .title_alignment(Alignment::Center))
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(Color::Black).bg(Color::Yellow));
+
+
+    f.render_widget(text, chunk);
 }
 
 pub fn render(app: &mut App, f: &mut Frame) {
@@ -89,4 +112,8 @@ pub fn render(app: &mut App, f: &mut Frame) {
             None
         });
     f.render_widget(tab_block, rchunks[1]);
+
+    if let Some(Selected::Quitting) = app.selected {
+        show_quit_popup(f);
+    }
 }

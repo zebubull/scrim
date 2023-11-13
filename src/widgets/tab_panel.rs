@@ -125,7 +125,7 @@ impl<'a> Widget for TabPanel<'a> {
         } else if self.scroll == height as u16 {
             String::from("BOT")
         } else {
-            format!("{}%", self.scroll * 100 / (height as u16))
+            format!("{}%", self.scroll * 100 / (len as u16 - height as u16))
         };
 
         Paragraph::new(vec![Line::from(colored_span!(text, Color::White))]).render(hchunks[1], buf);

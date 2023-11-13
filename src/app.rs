@@ -10,6 +10,7 @@ pub enum Selected {
     StatItem(i8),
     InfoItem(i8),
     TabItem(i16),
+    Quitting,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -206,7 +207,7 @@ impl App {
 
     pub fn update_selected_type(&mut self) {
         self.control_type = match self.selected {
-            None => None,
+            None | Some(Selected::Quitting) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput),
                 1 | 2 | 3 | 4 => Some(ControlType::NextPrev),
@@ -223,7 +224,7 @@ impl App {
 
     pub fn get_current_string(&mut self) -> Result<&mut String> {
         match self.selected {
-            None => Err(eyre!("no control is selected")),
+            None | Some(Selected::Quitting) => Err(eyre!("no control is selected")),
             Some(Selected::StatItem(_)) => Err(eyre!("selected control has no underlying string")),
             Some(Selected::InfoItem(_)) => Err(eyre!("selected control has no underlying string")),
             Some(Selected::TopBarItem(item)) => match item {
@@ -243,7 +244,7 @@ impl App {
 
     pub fn cycle_current_next(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {
@@ -311,7 +312,7 @@ impl App {
 
     pub fn cycle_current_prev(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
+            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {
