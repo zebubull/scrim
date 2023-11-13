@@ -1,11 +1,11 @@
 use color_eyre::eyre::{Result, WrapErr};
 use serde_derive::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Default, Clone)]
-pub struct SpellEntry {
+pub struct LookupEntry {
     #[serde(default)]
-    pub spell: String,
+    pub name: String,
     #[serde(default)]
     pub description_short: String,
     #[serde(default)]
@@ -14,15 +14,23 @@ pub struct SpellEntry {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Lookup {
-    spells: HashMap<String, SpellEntry>,
+    entries: HashMap<String, LookupEntry>,
+    #[serde(default)]
+    pub loaded: bool,
+    #[serde(default)]
+    load_path: PathBuf,
 }
 
 impl Lookup {
-    pub fn load(directory: &Path) -> Result<Self> {
-        let mut main_lookup = Lookup {
-            spells: HashMap::new(),
-        };
-        let files = std::fs::read_dir(directory).wrap_err_with(|| format!("failed to read lookups from '{}'", directory.to_string_lossy()))?;
+    pub fn new(load_path: PathBuf) -> Self {
+        Self {
+            entries: HashMap::new(),
+            loaded: false,
+            load_path,
+        }
+    }
+    pub fn load(&mut self) -> Result<()> {
+        let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| format!("failed to read lookups from '{}'", self.load_path.to_string_lossy()))?;
 
         files
             .filter_map(|f| match f {
@@ -58,13 +66,13 @@ impl Lookup {
                     )
                 })
                 .unwrap();
-                main_lookup.spells.extend(lookup.spells.into_iter());
+                self.entries.extend(lookup.entries.into_iter());
             });
 
-        Ok(main_lookup)
+        Ok(())
     }
 
-    pub fn get_spell(&self, spell: &str) -> Option<&SpellEntry> {
-        self.spells.get(spell)
+    pub fn get_entry(&self, name: &str) -> Option<&LookupEntry> {
+        self.entries.get(name)
     }
 }

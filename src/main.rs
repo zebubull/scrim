@@ -33,7 +33,7 @@ fn main() -> Result<()> {
         lookup_path.push(home::home_dir().unwrap());
         lookup_path.push(".scrim/")
     }
-    app.lookup = Lookup::load(&lookup_path)?;
+    app.lookup = Lookup::new(lookup_path);
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;

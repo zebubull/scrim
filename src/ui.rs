@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, LookupEntry, Selected},
+    app::{App, LookupResult, Selected},
     widgets::{
         info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
     },
@@ -68,14 +68,14 @@ fn show_lookup(f: &mut Frame, app: &App) {
         .margin(1)
         .constraints(vec![
             Constraint::Length(1),
-            Constraint::Length(1),
+            Constraint::Length(2),
             Constraint::Length(1),
             Constraint::Min(1),
         ])
         .split(chunk);
 
     let block = Block::default()
-        .title("Spell Lookup")
+        .title("Reference Lookup")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .on_yellow()
@@ -85,7 +85,7 @@ fn show_lookup(f: &mut Frame, app: &App) {
     let lookup = app.current_lookup.as_ref().unwrap();
 
     match lookup {
-        LookupEntry::Invalid(search) => {
+        LookupResult::Invalid(search) => {
             let p = Paragraph::new(format!("No entry found for '{}'", search))
                 .black()
                 .wrap(Wrap { trim: false });
@@ -97,21 +97,19 @@ fn show_lookup(f: &mut Frame, app: &App) {
                     .split(chunk)[0],
             );
         }
-        LookupEntry::Spell(entry) => {
-            let title = Paragraph::new(format!("{}", entry.spell))
+        LookupResult::Success(entry) => {
+            let title = Paragraph::new(format!("{}", entry.name))
                 .black()
                 .bold()
                 .alignment(Alignment::Center);
             f.render_widget(title, vchunks[0]);
             let short = Paragraph::new(format!("{}", entry.description_short))
                 .black()
-                .bold()
-                .alignment(Alignment::Left);
+                .alignment(Alignment::Center);
             f.render_widget(short, vchunks[1]);
             let desc = Paragraph::new(format!("{}", entry.description))
                 .black()
-                .bold()
-                .alignment(Alignment::Left)
+                .alignment(Alignment::Center)
                 .scroll((app.lookup_scroll, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(desc, vchunks[3]);
@@ -181,7 +179,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         show_quit_popup(f);
     }
 
-    if let Some(Selected::SpellLookup) = app.selected {
+    if let Some(Selected::ItemLookup(_)) = app.selected {
         show_lookup(f, app);
     }
 }

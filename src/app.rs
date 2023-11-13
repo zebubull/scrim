@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    lookup::{Lookup, SpellEntry},
+    lookup::{Lookup, LookupEntry},
     player::Player,
     Cycle,
 };
@@ -15,7 +15,7 @@ pub enum Selected {
     InfoItem(i8),
     TabItem(i16),
     Quitting,
-    SpellLookup,
+    ItemLookup(i16),
 }
 
 #[derive(Clone, Copy)]
@@ -32,8 +32,8 @@ pub enum Tab {
     Spells,
 }
 
-pub enum LookupEntry {
-    Spell(SpellEntry),
+pub enum LookupResult {
+    Success(LookupEntry),
     Invalid(String),
 }
 
@@ -50,7 +50,7 @@ pub struct App {
     pub path: Option<String>,
     pub lookup: Lookup,
     pub lookup_scroll: u16,
-    pub current_lookup: Option<LookupEntry>,
+    pub current_lookup: Option<LookupResult>,
 }
 
 impl App {
@@ -218,11 +218,11 @@ impl App {
         Ok(())
     }
 
-    pub fn lookup_current_selection(&mut self) {
+    pub fn lookup_current_selection(&mut self) -> Result<()> {
         use Tab::*;
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
-            _ => return,
+            _ => return Ok(()),
         };
 
         let tab = match self.current_tab {
@@ -232,21 +232,25 @@ impl App {
         };
 
         let text = tab[item as usize].trim().to_ascii_lowercase();
-        let lookup = self.lookup.get_spell(&text);
+        if !self.lookup.loaded {
+            self.lookup.load()?;
+        }
+        let lookup = self.lookup.get_entry(&text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
         self.current_lookup = match lookup {
-            Some(entry) => Some(LookupEntry::Spell(entry.clone())),
-            None => Some(LookupEntry::Invalid(text.clone())),
+            Some(entry) => Some(LookupResult::Success(entry.clone())),
+            None => Some(LookupResult::Invalid(text.clone())),
         };
 
-        self.selected = Some(Selected::SpellLookup);
+        self.selected = Some(Selected::ItemLookup(item));
         self.lookup_scroll = 0;
+        Ok(())
     }
 
     pub fn update_selected_type(&mut self) {
         self.control_type = match self.selected {
-            None | Some(Selected::Quitting) | Some(Selected::SpellLookup) => None,
+            None | Some(Selected::Quitting) | Some(Selected::ItemLookup(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput),
                 1 | 2 | 3 | 4 => Some(ControlType::NextPrev),
@@ -263,7 +267,7 @@ impl App {
 
     pub fn get_current_string(&mut self) -> Result<&mut String> {
         match self.selected {
-            None | Some(Selected::Quitting) | Some(Selected::SpellLookup) => {
+            None | Some(Selected::Quitting) | Some(Selected::ItemLookup(_)) => {
                 Err(eyre!("no control is selected"))
             }
             Some(Selected::StatItem(_)) => Err(eyre!("selected control has no underlying string")),
@@ -288,7 +292,7 @@ impl App {
             None
             | Some(Selected::TabItem(_))
             | Some(Selected::Quitting)
-            | Some(Selected::SpellLookup) => return Err(eyre!("no control is selected")),
+            | Some(Selected::ItemLookup(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {
@@ -359,7 +363,7 @@ impl App {
             None
             | Some(Selected::TabItem(_))
             | Some(Selected::Quitting)
-            | Some(Selected::SpellLookup) => return Err(eyre!("no control is selected")),
+            | Some(Selected::ItemLookup(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {

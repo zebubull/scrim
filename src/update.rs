@@ -131,7 +131,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Enter if app.can_edit_tab() => {
                     app.editing = true;
                 }
-                KeyCode::Char('l') => app.lookup_current_selection(),
+                KeyCode::Char('l') => app.lookup_current_selection()?,
                 _ => {}
             },
             Some(Selected::Quitting) => match key_event.code {
@@ -146,13 +146,17 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 }
                 _ => {}
             },
-            Some(Selected::SpellLookup) => match key_event.code {
+            Some(Selected::ItemLookup(_)) => match key_event.code {
                 KeyCode::Char('j') => app.lookup_scroll += 1,
                 KeyCode::Char('k') => {
                     app.lookup_scroll = app.lookup_scroll.checked_sub(1).unwrap_or(0)
                 }
                 KeyCode::Char('q') => {
-                    app.selected = None;
+                    let idx = match app.selected {
+                        Some(Selected::ItemLookup(idx)) => idx,
+                        _ => unreachable!(),
+                    };
+                    app.selected = Some(Selected::TabItem(idx));
                     app.current_lookup = None;
                 }
                 _ => {}
