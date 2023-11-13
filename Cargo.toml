@@ -3,9 +3,14 @@ name = "scrim"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata.parcel]
+cargo-binaries = ["scrim"]
+pkg-data = ["lookups/*"]
+
 [dependencies]
 color-eyre = "0.6.2"
 crossterm = "0.27.0"
+home = "0.5.5"
 num-derive = "0.4.1"
 num-traits = "0.2.17"
 ratatui = "0.24.0"

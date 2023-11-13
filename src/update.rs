@@ -37,6 +37,14 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
         match key_event.code {
             KeyCode::Esc => {
                 app.selected = None;
+                app.current_lookup = None;
+                return Ok(());
+            }
+            KeyCode::Char('q') if app.current_lookup.is_none() => 'quit: {
+                if let Some(Selected::Quitting) = app.selected {
+                    break 'quit;
+                }
+                app.selected = Some(Selected::Quitting);
                 return Ok(());
             }
             KeyCode::Char('S') => app.save_player()?,
@@ -123,6 +131,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Enter if app.can_edit_tab() => {
                     app.editing = true;
                 }
+                KeyCode::Char('l') => app.lookup_current_selection(),
                 _ => {}
             },
             Some(Selected::Quitting) => match key_event.code {
@@ -134,7 +143,18 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     }
                     app.save_player()?;
                     app.quit();
-                },
+                }
+                _ => {}
+            },
+            Some(Selected::SpellLookup) => match key_event.code {
+                KeyCode::Char('j') => app.lookup_scroll += 1,
+                KeyCode::Char('k') => {
+                    app.lookup_scroll = app.lookup_scroll.checked_sub(1).unwrap_or(0)
+                }
+                KeyCode::Char('q') => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
                 _ => {}
             },
             None => match key_event.code {
@@ -142,7 +162,6 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll as i16)),
-                KeyCode::Char('q') => app.selected = Some(Selected::Quitting),
                 KeyCode::Char('k') => {
                     app.vscroll = app.vscroll.checked_sub(1).unwrap_or(0);
                 }

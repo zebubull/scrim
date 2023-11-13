@@ -1,13 +1,13 @@
 use ratatui::{
     layout::{Alignment, Rect},
     prelude::{Constraint, Direction, Frame, Layout},
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::Line,
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
 };
 
 use crate::{
-    app::{App, Selected},
+    app::{App, LookupEntry, Selected},
     widgets::{
         info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
     },
@@ -57,6 +57,66 @@ fn show_quit_popup(f: &mut Frame) {
         .style(Style::default().fg(Color::Black).bg(Color::Yellow));
 
     f.render_widget(text, chunk);
+}
+
+fn show_lookup(f: &mut Frame, app: &App) {
+    let chunk = get_popup_rect((65, 55), f.size());
+    clear_rect(f, chunk);
+
+    let vchunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints(vec![
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(1),
+        ])
+        .split(chunk);
+
+    let block = Block::default()
+        .title("Spell Lookup")
+        .title_alignment(Alignment::Center)
+        .borders(Borders::ALL)
+        .on_yellow()
+        .black();
+    f.render_widget(block, chunk);
+
+    let lookup = app.current_lookup.as_ref().unwrap();
+
+    match lookup {
+        LookupEntry::Invalid(search) => {
+            let p = Paragraph::new(format!("No entry found for '{}'", search))
+                .black()
+                .wrap(Wrap { trim: false });
+            f.render_widget(
+                p,
+                Layout::default()
+                    .margin(1)
+                    .constraints(vec![Constraint::Percentage(100)])
+                    .split(chunk)[0],
+            );
+        }
+        LookupEntry::Spell(entry) => {
+            let title = Paragraph::new(format!("{}", entry.spell))
+                .black()
+                .bold()
+                .alignment(Alignment::Center);
+            f.render_widget(title, vchunks[0]);
+            let short = Paragraph::new(format!("{}", entry.description_short))
+                .black()
+                .bold()
+                .alignment(Alignment::Left);
+            f.render_widget(short, vchunks[1]);
+            let desc = Paragraph::new(format!("{}", entry.description))
+                .black()
+                .bold()
+                .alignment(Alignment::Left)
+                .scroll((app.lookup_scroll, 0))
+                .wrap(Wrap { trim: false });
+            f.render_widget(desc, vchunks[3]);
+        }
+    }
 }
 
 pub fn render(app: &mut App, f: &mut Frame) {
@@ -119,5 +179,9 @@ pub fn render(app: &mut App, f: &mut Frame) {
 
     if let Some(Selected::Quitting) = app.selected {
         show_quit_popup(f);
+    }
+
+    if let Some(Selected::SpellLookup) = app.selected {
+        show_lookup(f, app);
     }
 }

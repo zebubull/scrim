@@ -1,25 +1,30 @@
 use std::path::Path;
 
-use crate::{player::Player, Cycle};
+use crate::{
+    lookup::{Lookup, SpellEntry},
+    player::Player,
+    Cycle,
+};
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use strum_macros::Display;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Selected {
     TopBarItem(i8),
     StatItem(i8),
     InfoItem(i8),
     TabItem(i16),
     Quitting,
+    SpellLookup,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum ControlType {
     TextInput,
     NextPrev,
 }
 
-#[derive(Debug, Clone, Copy, Default, Display)]
+#[derive(Clone, Copy, Default, Display)]
 pub enum Tab {
     #[default]
     Notes,
@@ -27,7 +32,12 @@ pub enum Tab {
     Spells,
 }
 
-#[derive(Debug, Default)]
+pub enum LookupEntry {
+    Spell(SpellEntry),
+    Invalid(String),
+}
+
+#[derive(Default)]
 pub struct App {
     pub player: Player,
     pub should_quit: bool,
@@ -38,6 +48,9 @@ pub struct App {
     pub viewport_height: u16,
     pub current_tab: Tab,
     pub path: Option<String>,
+    pub lookup: Lookup,
+    pub lookup_scroll: u16,
+    pub current_lookup: Option<LookupEntry>,
 }
 
 impl App {
@@ -205,9 +218,35 @@ impl App {
         Ok(())
     }
 
+    pub fn lookup_current_selection(&mut self) {
+        use Tab::*;
+        let item = match self.selected {
+            Some(Selected::TabItem(item)) => item,
+            _ => return,
+        };
+
+        let tab = match self.current_tab {
+            Notes => &self.player.notes,
+            Inventory => &self.player.inventory,
+            Spells => &self.player.spells,
+        };
+
+        let text = tab[item as usize].trim().to_ascii_lowercase();
+        let lookup = self.lookup.get_spell(&text);
+
+        // Probably shouldn't clone but the lifetimes were too confusing :(
+        self.current_lookup = match lookup {
+            Some(entry) => Some(LookupEntry::Spell(entry.clone())),
+            None => Some(LookupEntry::Invalid(text.clone())),
+        };
+
+        self.selected = Some(Selected::SpellLookup);
+        self.lookup_scroll = 0;
+    }
+
     pub fn update_selected_type(&mut self) {
         self.control_type = match self.selected {
-            None | Some(Selected::Quitting) => None,
+            None | Some(Selected::Quitting) | Some(Selected::SpellLookup) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput),
                 1 | 2 | 3 | 4 => Some(ControlType::NextPrev),
@@ -224,7 +263,9 @@ impl App {
 
     pub fn get_current_string(&mut self) -> Result<&mut String> {
         match self.selected {
-            None | Some(Selected::Quitting) => Err(eyre!("no control is selected")),
+            None | Some(Selected::Quitting) | Some(Selected::SpellLookup) => {
+                Err(eyre!("no control is selected"))
+            }
             Some(Selected::StatItem(_)) => Err(eyre!("selected control has no underlying string")),
             Some(Selected::InfoItem(_)) => Err(eyre!("selected control has no underlying string")),
             Some(Selected::TopBarItem(item)) => match item {
@@ -244,9 +285,10 @@ impl App {
 
     pub fn cycle_current_next(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => {
-                return Err(eyre!("no control is selected"))
-            }
+            None
+            | Some(Selected::TabItem(_))
+            | Some(Selected::Quitting)
+            | Some(Selected::SpellLookup) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {
@@ -314,9 +356,10 @@ impl App {
 
     pub fn cycle_current_prev(&mut self) -> Result<()> {
         match self.selected {
-            None | Some(Selected::TabItem(_)) | Some(Selected::Quitting) => {
-                return Err(eyre!("no control is selected"))
-            }
+            None
+            | Some(Selected::TabItem(_))
+            | Some(Selected::Quitting)
+            | Some(Selected::SpellLookup) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
                     0 => {

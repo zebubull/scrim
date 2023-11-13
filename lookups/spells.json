@@ -1,0 +1,20 @@
+{
+    "spells": {
+        "magic missile": {
+            "spell": "Magic Missile",
+            "description_short": "1st-level evocation",
+            "description": "Casting Time: 1 action\nRange: 120 feet\nComponents: V, S\nDuration: Instantaneous\n\nYou create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously and you can direct them to hit one creature or several.\n\nAt Higher Levels. When you cast this spell using a spell slot of 2nd level or higher, the spell creates one more dart for each slot level above 1st.\n\nSpell Lists. Sorcerer, Wizard"
+        },
+        "acid splash": {
+            "spell": "Acid Splash",
+            "description_short": "Conjuration cantrip",
+            "description": "Casting Time: 1 action\nRange: 60 feet\nComponents: V, S\nDuration: Instantaneous\n\nYou hurl a bubble of acid. Choose one creature you can see within range, or choose two creatures you can see within range that are within 5 feet of each other. A target must succeed on a Dexterity saving throw or take 1d6 acid damage.\n\nAt Higher Levels. This spell's damage increases by 1d6 when you reach 5th level (2d6), 11th level (3d6), and 17th level (4d6).\n\nSpell Lists. Artificer, Sorcerer, Wizard"
+        },
+        "heat metal": {
+            "spell": "Heat Metal",
+            "description_short": "2nd-level transmutation",
+            "description": "Casting Time: 1 action\nRange: 60 feet\nComponents: V, S, M (a piece of iron and a flame)\nDuration: Concentration, up to 1 minute\n\nChoose a manufactured metal object, such as a metal weapon or a suit of heavy or medium metal armor, that you can see within range. You cause the object to glow red-hot. Any creature in physical contact with the object takes 2d8 fire damage when you cast the spell. Until the spell ends, you can use a bonus action on each of your subsequent turns to cause this damage again.\n\nIf a creature is holding or wearing the object and takes the damage from it, the creature must succeed on a Constitution saving throw or drop the object if it can. If it doesn't drop the object, it has disadvantage on attack rolls and ability checks until the start of your next turn.\n\nAt Higher Levels. When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d8 for each slot level above 2nd.\n\nSpell Lists. Artificer, Bard, Druid"
+
+        }
+    }
+}

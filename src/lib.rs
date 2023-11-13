@@ -19,6 +19,9 @@ pub mod update;
 /// D&D player definitions
 pub mod player;
 
+/// Lookup spell and item descriptions
+pub mod lookup;
+
 /// A trait for enums that allow cycling through contents. Use [`impl_cycle`] to
 /// automatically implement a non-wrapping version of this trait.
 pub trait Cycle: num_traits::FromPrimitive + strum::EnumCount {

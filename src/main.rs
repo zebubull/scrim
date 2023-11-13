@@ -1,8 +1,9 @@
 use std::env::args;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use scrim::app::App;
 use scrim::event::{Event, EventHandler};
+use scrim::lookup::Lookup;
 use scrim::tui::Tui;
 use scrim::update::update;
 
@@ -16,12 +17,23 @@ fn main() -> Result<()> {
 
     let args: Vec<_> = args().collect();
     let path = if args.len() > 1 {
-        Some(args[1..].join(" "))
+        Some(&args[1])
     } else {
         None
     };
 
-    app.path = path.clone();
+    app.path = path.cloned();
+
+    let mut lookup_path = PathBuf::new();
+    #[cfg(debug_assertions)] {
+        lookup_path.push("lookups/");
+    }
+
+    #[cfg(not(debug_assertions))] {
+        lookup_path.push(home::home_dir().unwrap());
+        lookup_path.push(".scrim/")
+    }
+    app.lookup = Lookup::load(&lookup_path)?;
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
