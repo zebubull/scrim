@@ -40,9 +40,11 @@ fn main() -> Result<()> {
     // App main loop
     tui.enter()?;
     while !app.should_quit {
+        tui.draw(&mut app)?;
         // Handle events
         match tui.events.next().unwrap() {
-            Event::Tick => tui.draw(&mut app)?,
+            // Tick event is currently unused
+            Event::Tick => {},
             Event::Key(key_event) => update(&mut app, key_event)?,
             Event::Mouse(_) => {}
             Event::Resize(_, y) => app.update_viewport_height(y)?,
