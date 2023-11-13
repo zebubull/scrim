@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
     app.update_viewport_height(terminal.size()?.height)?;
-    let events = EventHandler::new(1000 / 30);
+    let events = EventHandler::new();
     let mut tui = Tui::new(terminal, events);
 
     // Load player data
