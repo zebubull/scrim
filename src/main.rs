@@ -2,9 +2,9 @@ use std::env::args;
 use std::path::Path;
 
 use scrim::app::App;
+use scrim::event::{Event, EventHandler};
 use scrim::tui::Tui;
 use scrim::update::update;
-use scrim::event::{Event, EventHandler};
 
 use color_eyre::eyre::Result;
 use ratatui::{backend::CrosstermBackend, Terminal};
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
         match tui.events.next().unwrap() {
             Event::Tick => tui.draw(&mut app)?,
             Event::Key(key_event) => update(&mut app, key_event)?,
-            Event::Mouse(_) => {},
+            Event::Mouse(_) => {}
             Event::Resize(_, y) => app.update_viewport_height(y)?,
         };
     }

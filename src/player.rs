@@ -1,8 +1,10 @@
 use num_derive::FromPrimitive;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use strum_macros::{Display, EnumCount};
 
-#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+#[derive(
+    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+)]
 pub enum Class {
     #[default]
     Artificer,
@@ -22,7 +24,9 @@ pub enum Class {
 
 crate::impl_cycle!(Class);
 
-#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+#[derive(
+    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+)]
 pub enum Alignment {
     LG,
     LN,
@@ -38,7 +42,9 @@ pub enum Alignment {
 
 crate::impl_cycle!(Alignment);
 
-#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+#[derive(
+    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+)]
 pub enum Race {
     Dragonborn,
     HillDwarf,
@@ -59,7 +65,9 @@ pub enum Race {
 
 crate::impl_cycle!(Race);
 
-#[derive(Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount)]
+#[derive(
+    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+)]
 pub enum Background {
     #[default]
     Acolyte,
@@ -81,7 +89,7 @@ pub enum Background {
 
 crate::impl_cycle!(Background);
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Stats {
     #[serde(default)]
     pub strength: u8,
@@ -94,7 +102,7 @@ pub struct Stats {
     #[serde(default)]
     pub wisdom: u8,
     #[serde(default)]
-    pub charisma: u8
+    pub charisma: u8,
 }
 
 impl Default for Stats {
@@ -107,6 +115,41 @@ impl Default for Stats {
             wisdom: 10,
             charisma: 10,
         }
+    }
+}
+
+impl IntoIterator for Stats {
+    type Item = u8;
+    type IntoIter = StatsIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        StatsIter {
+            stats: self,
+            idx: 0,
+        }
+    }
+}
+
+pub struct StatsIter {
+    stats: Stats,
+    idx: usize,
+}
+
+impl Iterator for StatsIter {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ret = match self.idx {
+            0 => self.stats.strength,
+            1 => self.stats.dexterity,
+            2 => self.stats.constitution,
+            3 => self.stats.intelligence,
+            4 => self.stats.wisdom,
+            5 => self.stats.charisma,
+            _ => return None,
+        };
+        self.idx += 1;
+        Some(ret)
     }
 }
 
@@ -149,6 +192,16 @@ pub struct Player {
     pub prof_bonus: u8,
 }
 
+fn avg_roll(dice: u8) -> u8 {
+    match dice {
+        6 => 4,
+        8 => 5,
+        10 => 6,
+        12 => 7,
+        _ => unreachable!(),
+    }
+}
+
 impl Player {
     /// Recalculate all class dependant values
     pub fn recalculate_class(&mut self) {
@@ -159,11 +212,25 @@ impl Player {
             Fighter | Paladin | Ranger => 10,
             Barbarian => 12,
         };
+        self.max_hp = self.hit_dice as u16
+            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
+            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
     }
 
     /// Recalculate all level dependant values
     pub fn recalculate_level(&mut self) {
         self.hit_dice_remaining = std::cmp::min(self.level, self.hit_dice_remaining + 1);
+        self.prof_bonus = (self.level as f32 / 4.0).ceil() as u8 + 1;
+        self.max_hp = self.hit_dice as u16
+            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
+            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
+    }
+
+    /// Recalculate all level dependant values
+    pub fn recalculate_stats(&mut self) {
+        self.max_hp = self.hit_dice as u16
+            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
+            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
     }
 }
 
@@ -182,11 +249,11 @@ impl Default for Player {
             inventory: vec![],
             notes: vec![],
             spells: vec![],
-            hp: 0,
+            hp: 8,
             ac: 0,
             temp_hp: 0,
-            max_hp: 0,
-            prof_bonus: 0,
+            max_hp: 8,
+            prof_bonus: 2,
         }
     }
 }

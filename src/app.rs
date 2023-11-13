@@ -49,10 +49,18 @@ impl App {
     }
 
     pub fn load_player(&mut self, path: &Path) -> Result<()> {
-        let data = std::fs::read(path)
-            .wrap_err_with(|| format!("failed to load player from file `{}`", path.to_string_lossy()))?;
-        self.player = serde_json::from_slice(data.as_slice())
-            .wrap_err_with(|| format!("player file `{}` could not be loaded, it may be corrupt", path.to_string_lossy()))?;
+        let data = std::fs::read(path).wrap_err_with(|| {
+            format!(
+                "failed to load player from file `{}`",
+                path.to_string_lossy()
+            )
+        })?;
+        self.player = serde_json::from_slice(data.as_slice()).wrap_err_with(|| {
+            format!(
+                "player file `{}` could not be loaded, it may be corrupt",
+                path.to_string_lossy()
+            )
+        })?;
         Ok(())
     }
 
@@ -72,9 +80,17 @@ impl App {
 
     pub fn update_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
-        self.vscroll = std::cmp::min(self.vscroll, self.current_tab_len().checked_sub(self.viewport_height as usize).unwrap_or(0) as u16);
+        self.vscroll = std::cmp::min(
+            self.vscroll,
+            self.current_tab_len()
+                .checked_sub(self.viewport_height as usize)
+                .unwrap_or(0) as u16,
+        );
         if let Some(Selected::TabItem(idx)) = self.selected {
-            self.selected = Some(Selected::TabItem(std::cmp::min(idx, self.current_tab_len() as i16)));
+            self.selected = Some(Selected::TabItem(std::cmp::min(
+                idx,
+                self.current_tab_len() as i16,
+            )));
         }
     }
 
@@ -97,15 +113,15 @@ impl App {
             Notes => {
                 self.selected = Some(Selected::TabItem(self.player.notes.len() as i16));
                 self.player.notes.push(String::from(" "));
-            },
+            }
             Inventory => {
                 self.selected = Some(Selected::TabItem(self.player.inventory.len() as i16));
                 self.player.inventory.push(String::from(" "));
-            },
+            }
             Spells => {
                 self.selected = Some(Selected::TabItem(self.player.spells.len() as i16));
                 self.player.spells.push(String::from(" "));
-            },
+            }
         }
 
         self.update_scroll()?;
@@ -122,13 +138,13 @@ impl App {
         match self.current_tab {
             Notes => {
                 self.player.notes.insert(item, String::from(" "));
-            },
+            }
             Inventory => {
                 self.player.inventory.insert(item, String::from(" "));
-            },
+            }
             Spells => {
                 self.player.spells.insert(item, String::from(" "));
-            },
+            }
         }
 
         self.update_scroll()?;
@@ -142,24 +158,28 @@ impl App {
             _ => return Err(eyre!("cannot insert while not a tab is not selected")),
         } as usize;
 
+        if self.current_tab_len() == 0 {
+            return Ok(());
+        }
+
         match self.current_tab {
             Notes => {
                 self.player.notes.remove(item);
-                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.notes.len() - 1, item) as i16));
-            },
+            }
             Inventory => {
                 self.player.inventory.remove(item);
-                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.inventory.len() - 1, item) as i16));
-            },
+            }
             Spells => {
                 self.player.spells.remove(item);
-                self.selected = Some(Selected::TabItem(std::cmp::min(self.player.spells.len() - 1, item) as i16));
-            },
+            }
+        };
+
+        if item >= self.current_tab_len() {
+            self.selected = Some(Selected::TabItem(item as i16 - 1));
         }
 
         self.update_scroll()?;
         Ok(())
-
     }
 
     pub fn update_scroll(&mut self) -> Result<()> {
@@ -206,11 +226,9 @@ impl App {
             None => Err(eyre!("no control is selected")),
             Some(Selected::StatItem(_)) => Err(eyre!("selected control has no underlying string")),
             Some(Selected::InfoItem(_)) => Err(eyre!("selected control has no underlying string")),
-            Some(Selected::TopBarItem(item)) => {
-                match item {
-                    0 => Ok(&mut self.player.name),
-                    _ => Err(eyre!("selected control has no underlying string")),
-                }
+            Some(Selected::TopBarItem(item)) => match item {
+                0 => Ok(&mut self.player.name),
+                _ => Err(eyre!("selected control has no underlying string")),
             },
             Some(Selected::TabItem(item)) => {
                 use Tab::*;
@@ -228,15 +246,32 @@ impl App {
             None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
-                    0 => self.player.stats.strength = std::cmp::min(20, self.player.stats.strength + 1),
-                    1 => self.player.stats.dexterity = std::cmp::min(20, self.player.stats.dexterity + 1),
-                    2 => self.player.stats.constitution = std::cmp::min(20, self.player.stats.constitution + 1),
-                    3 => self.player.stats.intelligence = std::cmp::min(20, self.player.stats.intelligence + 1),
+                    0 => {
+                        self.player.stats.strength =
+                            std::cmp::min(20, self.player.stats.strength + 1)
+                    }
+                    1 => {
+                        self.player.stats.dexterity =
+                            std::cmp::min(20, self.player.stats.dexterity + 1)
+                    }
+                    2 => {
+                        self.player.stats.constitution =
+                            std::cmp::min(20, self.player.stats.constitution + 1)
+                    }
+                    3 => {
+                        self.player.stats.intelligence =
+                            std::cmp::min(20, self.player.stats.intelligence + 1)
+                    }
                     4 => self.player.stats.wisdom = std::cmp::min(20, self.player.stats.wisdom + 1),
-                    5 => self.player.stats.charisma = std::cmp::min(20, self.player.stats.charisma + 1),
+                    5 => {
+                        self.player.stats.charisma =
+                            std::cmp::min(20, self.player.stats.charisma + 1)
+                    }
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
-            },
+
+                self.player.recalculate_stats();
+            }
             Some(Selected::InfoItem(item)) => {
                 match item {
                     0 => self.player.hp = std::cmp::min(self.player.max_hp, self.player.hp + 1),
@@ -244,18 +279,27 @@ impl App {
                     2 => self.player.temp_hp += 1,
                     3 => self.player.ac = std::cmp::min(self.player.ac + 1, 20),
                     4 => self.player.prof_bonus += 1,
-                    5 => self.player.hit_dice_remaining = std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1),
+                    5 => {
+                        self.player.hit_dice_remaining =
+                            std::cmp::min(self.player.level, self.player.hit_dice_remaining + 1)
+                    }
                     // Reverse for more natural scrolling
                     6 => self.player.background = self.player.background.prev(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
-            },
+            }
             Some(Selected::TopBarItem(item)) => {
                 match item {
-                    2 => { self.player.level = std::cmp::min(20, self.player.level + 1); self.player.recalculate_level(); },
+                    2 => {
+                        self.player.level = std::cmp::min(20, self.player.level + 1);
+                        self.player.recalculate_level();
+                    }
                     // Reverse these for more natural scrolling
                     1 => self.player.race = self.player.race.prev(),
-                    3 => { self.player.class = self.player.class.prev(); self.player.recalculate_class(); },
+                    3 => {
+                        self.player.class = self.player.class.prev();
+                        self.player.recalculate_class();
+                    }
                     4 => self.player.alignment = self.player.alignment.prev(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
@@ -270,34 +314,65 @@ impl App {
             None | Some(Selected::TabItem(_)) => return Err(eyre!("no control is selected")),
             Some(Selected::StatItem(item)) => {
                 match item {
-                    0 => self.player.stats.strength = self.player.stats.strength.checked_sub(1).unwrap_or(0),
-                    1 => self.player.stats.dexterity = self.player.stats.dexterity.checked_sub(1).unwrap_or(0),
-                    2 => self.player.stats.constitution = self.player.stats.constitution.checked_sub(1).unwrap_or(0),
-                    3 => self.player.stats.intelligence = self.player.stats.intelligence.checked_sub(1).unwrap_or(0),
-                    4 => self.player.stats.wisdom = self.player.stats.wisdom.checked_sub(1).unwrap_or(0),
-                    5 => self.player.stats.charisma = self.player.stats.charisma.checked_sub(1).unwrap_or(0),
+                    0 => {
+                        self.player.stats.strength =
+                            self.player.stats.strength.checked_sub(1).unwrap_or(0)
+                    }
+                    1 => {
+                        self.player.stats.dexterity =
+                            self.player.stats.dexterity.checked_sub(1).unwrap_or(0)
+                    }
+                    2 => {
+                        self.player.stats.constitution =
+                            self.player.stats.constitution.checked_sub(1).unwrap_or(0)
+                    }
+                    3 => {
+                        self.player.stats.intelligence =
+                            self.player.stats.intelligence.checked_sub(1).unwrap_or(0)
+                    }
+                    4 => {
+                        self.player.stats.wisdom =
+                            self.player.stats.wisdom.checked_sub(1).unwrap_or(0)
+                    }
+                    5 => {
+                        self.player.stats.charisma =
+                            self.player.stats.charisma.checked_sub(1).unwrap_or(0)
+                    }
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
-            },
+
+                self.player.recalculate_stats();
+            }
             Some(Selected::InfoItem(item)) => {
                 match item {
                     0 => self.player.hp = self.player.hp.checked_sub(1).unwrap_or(0),
                     1 => self.player.max_hp = self.player.max_hp.checked_sub(1).unwrap_or(0),
                     2 => self.player.temp_hp = self.player.temp_hp.checked_sub(1).unwrap_or(0),
                     3 => self.player.ac = self.player.ac.checked_sub(1).unwrap_or(0),
-                    4 => self.player.prof_bonus = self.player.prof_bonus.checked_sub(1).unwrap_or(0),
-                    5 => self.player.hit_dice_remaining = self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0),
+                    4 => {
+                        self.player.prof_bonus = self.player.prof_bonus.checked_sub(1).unwrap_or(0)
+                    }
+                    5 => {
+                        self.player.hit_dice_remaining =
+                            self.player.hit_dice_remaining.checked_sub(1).unwrap_or(0)
+                    }
                     // Reverse for more natural scrolling
                     6 => self.player.background = self.player.background.next(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }
-            },
+            }
             Some(Selected::TopBarItem(item)) => {
                 match item {
                     1 => self.player.race = self.player.race.next(),
-                    2 => { self.player.level = self.player.level.checked_sub(1).unwrap_or(0); self.player.recalculate_level(); },
+                    2 => {
+                        self.player.level = std::cmp::max(1, self.player.level - 1);
+                        self.player.recalculate_level();
+                    }
                     // Reverse these two for more natural scrolling
-                    3 => {self.player.class = self.player.class.next(); self.player.recalculate_class(); },
+                    3 => {
+                        self.player.class = self.player.class.next();
+                        self.player.recalculate_class();
+                    }
                     4 => self.player.alignment = self.player.alignment.next(),
                     _ => return Err(eyre!("selected control has no underlying cyclable")),
                 }

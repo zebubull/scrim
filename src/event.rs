@@ -1,5 +1,9 @@
-use crossterm::event::{KeyEvent, MouseEvent, self, Event as CrosstermEvent};
-use std::{sync::mpsc, thread, time::{Duration, Instant}};
+use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
+use std::{
+    sync::mpsc,
+    thread,
+    time::{Duration, Instant},
+};
 
 use color_eyre::eyre::Result;
 
@@ -30,20 +34,23 @@ impl EventHandler {
             thread::spawn(move || {
                 let mut last_tick = Instant::now();
                 loop {
-                    let timeout = tick_rate.checked_sub(last_tick.elapsed()).unwrap_or(tick_rate);
+                    let timeout = tick_rate
+                        .checked_sub(last_tick.elapsed())
+                        .unwrap_or(tick_rate);
                     if event::poll(timeout).expect("No events available") {
                         match event::read().expect("Failed to read event") {
                             CrosstermEvent::Key(e) => {
                                 if e.kind == event::KeyEventKind::Press {
-                                    sender.send(Event::Key(e)) 
+                                    sender.send(Event::Key(e))
                                 } else {
                                     Ok(())
                                 }
-                            },
+                            }
                             CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
                             CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
-                            _ => {Ok(())},
-                        }.expect("Failed to send terminal event")
+                            _ => Ok(()),
+                        }
+                        .expect("Failed to send terminal event")
                     }
 
                     if last_tick.elapsed() >= tick_rate {
@@ -54,11 +61,15 @@ impl EventHandler {
             })
         };
 
-        Self { sender, reciever, handler }
+        Self {
+            sender,
+            reciever,
+            handler,
+        }
     }
 
     /// Recieve the next event from the handler thread.
-    /// 
+    ///
     /// This function will always block the current thread if
     /// there is no data available and it's possible for more data to be sent.
     pub fn next(&self) -> Result<Event> {

@@ -22,7 +22,7 @@ impl Tui {
     }
 
     /// Initialize and activate the TUI interface.
-    /// 
+    ///
     /// Enables raw mode, sets terminal properties, and registers the custom panic hook.
     pub fn enter(&mut self) -> Result<()> {
         terminal::enable_raw_mode()?;
@@ -40,7 +40,7 @@ impl Tui {
     }
 
     /// Reset the terminal interface to default.
-    /// 
+    ///
     /// Also used by the panic hook to restore the terminal.
     fn reset() -> Result<()> {
         terminal::disable_raw_mode()?;
@@ -49,7 +49,7 @@ impl Tui {
     }
 
     /// Exit the TUI interface.
-    /// 
+    ///
     /// Disables raw mode and reset the terminal to default properties.
     pub fn exit(&mut self) -> Result<()> {
         Self::reset()?;

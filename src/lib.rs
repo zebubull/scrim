@@ -4,6 +4,9 @@ pub mod app;
 /// UI rendering module
 pub mod ui;
 
+/// UI Widgets
+pub mod widgets;
+
 /// Event handler module
 pub mod event;
 
@@ -30,14 +33,18 @@ macro_rules! impl_cycle {
         impl crate::Cycle for $t {
             fn next(self) -> $t {
                 use strum::EnumCount;
-                num_traits::FromPrimitive::from_u8(std::cmp::min(self as u8 + 1, <$t>::COUNT as u8 - 1)).unwrap()
+                num_traits::FromPrimitive::from_u8(std::cmp::min(
+                    self as u8 + 1,
+                    <$t>::COUNT as u8 - 1,
+                ))
+                .unwrap()
             }
 
             fn prev(self) -> $t {
                 num_traits::FromPrimitive::from_u8(std::cmp::max(self as i8 - 1, 0) as u8).unwrap()
             }
         }
-    }
+    };
 }
 
 pub(crate) use impl_cycle;
