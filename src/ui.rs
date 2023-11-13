@@ -42,7 +42,7 @@ fn clear_rect(f: &mut Frame, rect: Rect) {
 }
 
 fn show_quit_popup(f: &mut Frame) {
-    let chunk = get_popup_rect((25, 10), f.size());
+    let chunk = get_popup_rect((25, 20), f.size());
     clear_rect(f, chunk);
 
     let text = Paragraph::new("y - yes (save)\nq - yes (don't save)\nn - no")
