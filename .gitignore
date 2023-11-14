@@ -1,2 +1,3 @@
 **/target
 *.player
+**/.DS_STORE
