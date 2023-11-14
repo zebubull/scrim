@@ -30,7 +30,7 @@ pub trait Cycle: num_traits::FromPrimitive + strum::EnumCount {
 }
 
 // I literally spent 2 hours trying to write a proc macro to do this and gave up... so this is good enough
-/// Implements a non-wrapping version of the [`Cycle`] trait on the given enum.
+/// Implements a non-wrapping version of the `Cycle` trait on the given enum.
 macro_rules! impl_cycle {
     ($t: ty) => {
         impl crate::Cycle for $t {

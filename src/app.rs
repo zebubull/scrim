@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, rc::Rc};
 
 use crate::{
     lookup::{Lookup, LookupEntry},
@@ -8,19 +8,36 @@ use crate::{
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use strum_macros::Display;
 
+/// An enum that represents a control as well as an index into that control's values, if it has any.
 #[derive(Clone, Copy)]
 pub enum Selected {
+    /// An item in the top bar.
     TopBarItem(u32),
+    /// An item in the stat block.
     StatItem(u32),
+    /// An item in the player info bar.
     InfoItem(u32),
+    /// A line in the tab panel.
     TabItem(u32),
+    /// The quit menu is showing.
     Quitting,
+    /// The lookup menu is showing.
+    ///
+    /// This holds a reference to the tab item that the lookup originated from.
     ItemLookup(u32),
 }
 
+/// An enum that represents the way in which a field can be modified by the user.
 pub enum ControlType<'a> {
+    /// A control type that is a text input from the user. A mutable reference
+    /// to the text to be modified is provided.
     TextInput(&'a mut String),
+    /// A control type that cycles numericaly upwards or downwards. A mutable
+    /// reference to the number is provided, as well as a minimum and maximum
+    /// value, respectively.
     Cycle(&'a mut u32, u32, u32),
+    /// A control type that cycles upwards or downwards through non-numerical values.
+    /// `prev` and `next` functions are given, respectively.
     CycleFn(fn(&mut App), fn(&mut App)),
 }
 
@@ -33,34 +50,49 @@ pub enum Tab {
 }
 
 pub enum LookupResult {
-    Success(LookupEntry),
+    Success(Rc<LookupEntry>),
     Invalid(String),
 }
 
+/// A struct representing the current app state.
 #[derive(Default)]
 pub struct App {
+    /// The player currently being viewed.
     pub player: Player,
+    /// Whether the app should terminate at the next update cycle.
     pub should_quit: bool,
+    /// Whether the user is currently editing a control.
     pub editing: bool,
+    /// The currently selected pane of the user interface.
     pub selected: Option<Selected>,
+    /// The amount of lines to scroll the current tab pane by.
     pub vscroll: u32,
+    /// The current height of the tab viewport, in lines.
     pub viewport_height: u32,
+    /// The currently selected tab.
     pub current_tab: Tab,
+    /// The player path specified at startup, if it exists.
     pub path: Option<String>,
+    /// The app's reference lookup table.
     pub lookup: Lookup,
+    /// The amount of lines to scroll the reference lookup pane by.
     pub lookup_scroll: u32,
+    /// The most recent lookup result, if it exists.
     pub current_lookup: Option<LookupResult>,
 }
 
 impl App {
+    /// Create a new instance of the `App` struct. Currently aliases to `App::default()`.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Requests the application to exit by updating the should_quit value.
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
 
+    /// Attempts to load the player at the given file path.
     pub fn load_player(&mut self, path: &Path) -> Result<()> {
         let data = std::fs::read(path).wrap_err_with(|| {
             format!(
@@ -77,6 +109,11 @@ impl App {
         Ok(())
     }
 
+    /// Saves the currently edited player.
+    ///
+    /// The app will try to save to the file name specified in the
+    /// environment args. If no file was specified, it will create a
+    /// new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
         let path = format!("{}", self.path.as_ref().unwrap_or(&self.player.name));
@@ -84,6 +121,9 @@ impl App {
         Ok(())
     }
 
+    /// Update the app's viewport height cache.
+    ///
+    /// This method will recalculate the current tab scroll.
     pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
         // tab frame size
         self.viewport_height = height as u32 - 9;
@@ -97,6 +137,7 @@ impl App {
         Ok(())
     }
 
+    /// Returns a reference to the data of the currently selected tab.
     pub fn current_tab(&self) -> &Vec<String> {
         use Tab::*;
         match self.current_tab {
@@ -106,6 +147,7 @@ impl App {
         }
     }
 
+    /// Returns a mutable reference to the data of the currently selected tab.
     pub fn current_tab_mut(&mut self) -> &mut Vec<String> {
         use Tab::*;
         match self.current_tab {
@@ -115,9 +157,11 @@ impl App {
         }
     }
 
+    /// Switches the current tab and recalculates the current tab scroll.
     pub fn update_tab(&mut self, tab: Tab) -> Result<()> {
         self.current_tab = tab;
 
+        // Using update with zero will just recheck scroll bounds
         if let Some(Selected::TabItem(_)) = self.selected {
             self.update_item_scroll(0)?;
         } else {
@@ -127,6 +171,11 @@ impl App {
         Ok(())
     }
 
+    /// Adds an empty entry to the current tab.
+    ///
+    /// The entry is located after the currently selected item
+    /// or at the first position if the current tab is empty.
+    /// This method will also recalculate the current tab scroll.
     pub fn append_item_to_tab(&mut self) -> Result<()> {
         let mut item = match self.selected {
             Some(Selected::TabItem(item)) => item,
@@ -144,6 +193,11 @@ impl App {
         Ok(())
     }
 
+    /// Adds an empty entry to the current tab.
+    ///
+    /// The entry is located before the currently selected item
+    /// or at the first position if the current tab is empty.
+    /// This method will also recalculate the current tab scroll.
     pub fn insert_item_to_tab(&mut self) -> Result<()> {
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
@@ -157,6 +211,11 @@ impl App {
         Ok(())
     }
 
+    /// Remove the currently selected entry from the tab.
+    ///
+    /// This method does not check to make sure there is an entry
+    /// to delete and will panic if the current tab is empty. It will
+    /// also recalulate the current tab scroll.
     pub fn delete_item_from_tab(&mut self) -> Result<()> {
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
@@ -166,14 +225,17 @@ impl App {
         let tab = self.current_tab_mut();
         tab.remove(item);
 
+        let new_idx = item.saturating_sub(1) as u32;
+
         if item >= tab.len() {
-            self.selected = Some(Selected::TabItem(item as u32 - 1));
+            self.selected = Some(Selected::TabItem(new_idx));
         }
 
-        self.refresh_scroll(item as u32 - 1);
+        self.refresh_scroll(new_idx);
         Ok(())
     }
 
+    /// Moves the current overview scroll value by the given amount of lines.
     pub fn update_overview_scroll(&mut self, amount: i32) {
         let len = self.current_tab().len() as u32;
         if len == 0 {
@@ -181,11 +243,14 @@ impl App {
             return;
         }
 
-        let max = len - self.viewport_height;
+        let max = len.saturating_sub(self.viewport_height);
 
         self.vscroll = std::cmp::min(self.vscroll.saturating_add_signed(amount), max);
     }
 
+    /// Moves the current line scroll value and selected item by the given amount of lines.
+    ///
+    /// This method will throw an error if no tab is currently selected.
     pub fn update_item_scroll(&mut self, amount: i32) -> Result<()> {
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
@@ -207,6 +272,10 @@ impl App {
         Ok(())
     }
 
+    /// Updates the current tab scroll if necessary to display the item
+    /// on the given line.
+    ///
+    /// This should not be used in overview mode. Use `App::update_overview_scroll()` instead.
     fn refresh_scroll(&mut self, selected: u32) {
         if selected < self.vscroll {
             // If the current line is above the viewport, scroll up to it
@@ -217,6 +286,9 @@ impl App {
         }
     }
 
+    /// Uses the current selected tab item to lookup a reference entry.
+    ///
+    /// This method does not perform any kind of caching.
     pub fn lookup_current_selection(&mut self) -> Result<()> {
         use Tab::*;
         let item = match self.selected {
@@ -247,6 +319,7 @@ impl App {
         Ok(())
     }
 
+    /// Get the control type associated with the currently selected item.
     pub fn get_selected_type(&mut self) -> Option<ControlType> {
         match self.selected {
             None | Some(Selected::Quitting) | Some(Selected::ItemLookup(_)) => None,

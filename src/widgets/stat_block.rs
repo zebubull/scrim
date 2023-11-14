@@ -7,13 +7,18 @@ use ratatui::{
 
 use crate::{player::Stats, widgets::colored_span};
 
+/// A widget that renders the player's stat block.
 pub struct StatBlock<'a> {
+    /// The bound player stats.
     stats: &'a Stats,
+    /// Which stat to highlight, if any.
     highlight: Option<u8>,
+    /// Whether the app is editing.
     editing: bool,
 }
 
 impl<'a> StatBlock<'a> {
+    /// Create a new `StatBlock` bound to the given stats.
     pub fn new(stats: &'a Stats) -> Self {
         Self {
             stats,
@@ -22,11 +27,13 @@ impl<'a> StatBlock<'a> {
         }
     }
 
+    /// Set which stat to highlight, if any.
     pub fn highlight(mut self, item: Option<u8>) -> Self {
         self.highlight = item;
         self
     }
 
+    /// Set whether to display the highlight using standard or editing colors.
     pub fn editing(mut self, editing: bool) -> Self {
         self.editing = editing;
         self
@@ -56,6 +63,7 @@ impl<'a> Widget for StatBlock<'a> {
             });
 
         if let Some(item) = self.highlight {
+            // Main line, modifier, and separator make stride of 3.
             lines[item as usize * 3].spans[0].patch_style(Style::default().fg(Color::Black).bg(
                 if self.editing {
                     Color::LightGreen

@@ -1,6 +1,10 @@
+/// Info-bar-drawing widget
 pub mod info_bar;
+/// Player-bar-drawing widget
 pub mod player_bar;
+/// Stat-block-drawing widget
 pub mod stat_block;
+/// Tab-panel-drawing widget
 pub mod tab_panel;
 
 macro_rules! separator {

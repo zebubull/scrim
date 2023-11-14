@@ -7,11 +7,17 @@ use ratatui::{
 
 use crate::{app::Tab, player::Player, widgets::colored_span};
 
+/// A widget that renders the current tab panel, tab selection, and scroll display.
 pub struct TabPanel<'a> {
+    /// The bound player.
     player: &'a Player,
+    /// The tab to display
     tab: Tab,
+    /// Which line to highlight, if any.
     highlight: Option<u16>,
+    /// Whether editing mode is enabled.
     editing: bool,
+    /// The amount of lines to scroll the viewport by.
     scroll: u16,
 }
 
@@ -26,16 +32,19 @@ impl<'a> TabPanel<'a> {
         }
     }
 
+    /// Set the highlighted line.
     pub fn highlight(mut self, item: Option<u16>) -> Self {
         self.highlight = item;
         self
     }
 
+    /// Set whether to display the highlight using standard or editing colors.
     pub fn editing(mut self, editing: bool) -> Self {
         self.editing = editing;
         self
     }
 
+    /// Set the amount of scroll lines.
     pub fn scroll(mut self, scroll: u16) -> Self {
         self.scroll = scroll;
         self
@@ -44,16 +53,18 @@ impl<'a> TabPanel<'a> {
 
 impl<'a> Widget for TabPanel<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        let vchunks = Layout::default()
+        // Create layouts
+        let main_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Min(1), Constraint::Length(1)])
             .split(area);
 
-        let hchunks = Layout::default()
+        let bottom_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Min(1), Constraint::Length(4)])
-            .split(vchunks[1]);
+            .split(main_chunks[1]);
 
+        // Draw the main tab pane
         let len = match self.tab {
             Tab::Notes => &self.player.notes,
             Tab::Inventory => &self.player.inventory,
@@ -61,6 +72,7 @@ impl<'a> Widget for TabPanel<'a> {
         }
         .len();
 
+        // 2 lines for border, 1 line for bottom bar.
         let height = area.height as usize - 3;
 
         let mut lines: Vec<Line> = match self.tab {
@@ -85,6 +97,7 @@ impl<'a> Widget for TabPanel<'a> {
             }
         }
 
+        // Draw the selected tab display
         Paragraph::new(lines)
             .block(
                 Block::new()
@@ -92,7 +105,7 @@ impl<'a> Widget for TabPanel<'a> {
                     .borders(Borders::ALL),
             )
             .alignment(Alignment::Left)
-            .render(vchunks[0], buf);
+            .render(main_chunks[0], buf);
 
         let mut text = vec![
             colored_span!("NOTES", Color::White),
@@ -118,8 +131,9 @@ impl<'a> Widget for TabPanel<'a> {
 
         Paragraph::new(vec![Line::from(text)])
             .alignment(Alignment::Left)
-            .render(hchunks[0], buf);
+            .render(bottom_chunks[0], buf);
 
+        // Draw the scroll percentage display
         let text = if self.scroll == 0 {
             String::from("TOP")
         } else if self.scroll == len as u16 - height as u16 {
@@ -128,6 +142,7 @@ impl<'a> Widget for TabPanel<'a> {
             format!("{}%", self.scroll * 100 / (len as u16 - height as u16))
         };
 
-        Paragraph::new(vec![Line::from(colored_span!(text, Color::White))]).render(hchunks[1], buf);
+        Paragraph::new(vec![Line::from(colored_span!(text, Color::White))])
+            .render(bottom_chunks[1], buf);
     }
 }

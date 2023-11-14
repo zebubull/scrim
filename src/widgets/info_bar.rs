@@ -10,13 +10,18 @@ use crate::{
     widgets::{colored_span, separator},
 };
 
+/// A widget to display the player info bar.
 pub struct InfoBar<'a> {
+    /// The bound player.
     player: &'a Player,
+    /// Which item to highlight, if any.
     highlight: Option<u8>,
+    /// Whether the app is editing.
     editing: bool,
 }
 
 impl<'a> InfoBar<'a> {
+    /// Create a new `InfoBar` bound to the given player.
     pub fn new(player: &'a Player) -> Self {
         Self {
             player,
@@ -25,11 +30,13 @@ impl<'a> InfoBar<'a> {
         }
     }
 
+    /// Set which item to highlight, if any.
     pub fn highlight(mut self, item: Option<u8>) -> Self {
         self.highlight = item;
         self
     }
 
+    /// Set whether to display the highlight using standard or editing colors.
     pub fn editing(mut self, editing: bool) -> Self {
         self.editing = editing;
         self
@@ -64,6 +71,7 @@ impl<'a> Widget for InfoBar<'a> {
         ]);
 
         if let Some(item) = self.highlight {
+            // Actual item and '|' separator make stride of 2.
             line.spans[item as usize * 2].patch_style(Style::default().fg(Color::Black).bg(
                 if self.editing {
                     Color::LightGreen

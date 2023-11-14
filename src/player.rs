@@ -90,18 +90,13 @@ pub enum Background {
 crate::impl_cycle!(Background);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Stats {
-    #[serde(default)]
     pub strength: u32,
-    #[serde(default)]
     pub dexterity: u32,
-    #[serde(default)]
     pub constitution: u32,
-    #[serde(default)]
     pub intelligence: u32,
-    #[serde(default)]
     pub wisdom: u32,
-    #[serde(default)]
     pub charisma: u32,
 }
 
@@ -167,45 +162,63 @@ impl Iterator for StatsIter {
     }
 }
 
-// I do not know of a better way to do this
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Player {
-    #[serde(default)]
+    /// The player's name.
     pub name: String,
-    #[serde(default)]
+    /// The player's class.
+    ///
+    /// This should not be manually updated, as class dependant
+    /// values will not be recalculated; call `Player::update_class()` instead.
     pub class: Class,
-    #[serde(default)]
+    /// The player's level.
+    ///
+    /// Whenever this is changed, `Player::update_level_dependants()`
+    /// should be called to ensure that all calculated values are up to date.
     pub level: u32,
-    #[serde(default)]
+    /// The player's background.
     pub background: Background,
-    #[serde(default)]
+    /// The player's alignment.
     pub alignment: Alignment,
-    #[serde(default)]
+    /// The player's stats.
+    ///
+    /// Whenever a stat is changed, `Player::update_stat_dependants()`
+    /// should be called to ensure that all calculated values are up to date.
     pub stats: Stats,
-    #[serde(default)]
+    /// The player's hit dice value, as calculated using the current class.
     pub hit_dice: u32,
-    #[serde(default)]
+    /// The amount of hit dice the player has remaining.
     pub hit_dice_remaining: u32,
-    #[serde(default)]
+    /// The player's current race.
+    ///
+    /// Currently, no dependants are calculated using the player's race, so this
+    /// is free to be updated as-is.
     pub race: Race,
-    #[serde(default)]
+    /// A vector containing all entries into the inventory tab.
     pub inventory: Vec<String>,
-    #[serde(default)]
+    /// A vector containing all entries into the notes tab.
     pub notes: Vec<String>,
-    #[serde(default)]
+    /// A vector containing all entries into the spells tab.
     pub spells: Vec<String>,
-    #[serde(default)]
+    /// The player's current health.
     pub hp: u32,
-    #[serde(default)]
+    /// The player's armor class.
     pub ac: u32,
-    #[serde(default)]
+    /// The amount of temporary hit points the player has.
     pub temp_hp: u32,
-    #[serde(default)]
+    /// The player's maximum health.
+    ///
+    /// This value is automatically calculated using the player's class and
+    /// level, assuming that avg rolls are used (as they should be).
     pub max_hp: u32,
-    #[serde(default)]
+    /// The player's proficiency bonus.
+    ///
+    /// This value is automatically calculated using the player's level.
     pub prof_bonus: u32,
 }
 
+/// Get the avg roll value for a given dice.
 fn avg_roll(dice: u32) -> u32 {
     match dice {
         6 => 4,
@@ -217,6 +230,7 @@ fn avg_roll(dice: u32) -> u32 {
 }
 
 impl Player {
+    /// Sets the player's class and updates any class dependant values.
     pub fn update_class(&mut self, class: Class) {
         use Class::*;
         self.class = class;
@@ -230,6 +244,7 @@ impl Player {
         self.update_hp();
     }
 
+    /// Updates any level dependant values.
     pub fn update_level_dependants(&mut self) {
         self.hit_dice_remaining = std::cmp::min(self.level, self.hit_dice_remaining + 1);
         self.prof_bonus = (self.level as f32 / 4.0).ceil() as u32 + 1;
@@ -237,15 +252,20 @@ impl Player {
         self.update_hp();
     }
 
+    /// Updates any stat dependant values.
     pub fn update_stat_dependants(&mut self) {
         self.update_hp();
     }
 
+    /// Recalculates the player's max health and adjusts current
+    /// health accordingly.
     fn update_hp(&mut self) {
+        let old_max = self.max_hp as i32;
         self.max_hp = self.hit_dice as u32
             + (avg_roll(self.hit_dice) as u32 * (self.level as u32 - 1))
             + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u32 * self.level as u32;
-        self.hp = std::cmp::min(self.hp, self.max_hp);
+
+        self.hp = self.hp.saturating_add_signed(self.max_hp as i32 - old_max);
     }
 }
 

@@ -2,6 +2,7 @@ use crate::app::{App, ControlType, Selected, Tab};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
+/// Process the given key event and update that app's state accordingly.
 pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
     if app.editing {
         if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
@@ -47,7 +48,11 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
     } else {
         match key_event.code {
             KeyCode::Esc => {
-                app.selected = None;
+                // Properly retain the tab panel item if the lookup menu is closing.
+                app.selected = match app.selected {
+                    Some(Selected::ItemLookup(item)) => Some(Selected::TabItem(item)),
+                    _ => None,
+                };
                 app.current_lookup = None;
                 return Ok(());
             }
@@ -132,7 +137,9 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Enter if app.current_tab().len() > 0 => {
                     app.editing = true;
                 }
-                KeyCode::Char('l') => app.lookup_current_selection()?,
+                KeyCode::Char('l') if app.current_tab().len() > 0 => {
+                    app.lookup_current_selection()?
+                }
                 _ => {}
             },
             Some(Selected::Quitting) => match key_event.code {

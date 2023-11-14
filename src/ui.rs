@@ -35,12 +35,19 @@ fn get_popup_rect((width, height): (u16, u16), parent: Rect) -> Rect {
     vpart[1]
 }
 
+/// Clear the given rectangle by writing a paragraph of spaces.
+///
+/// There is probably a better way to do this but I have not figured
+/// it out yet so this will do for now.
 fn clear_rect(f: &mut Frame, rect: Rect) {
     let s = " ".repeat(rect.width as usize);
     let lines: Vec<Line> = (0..rect.height).map(|_| Line::from(s.clone())).collect();
     f.render_widget(Paragraph::new(lines), rect);
 }
 
+/// Show the quit confirmation menu
+///
+/// This could probably be moved to its own widget but I haven't done that yet.
 fn show_quit_popup(f: &mut Frame) {
     let chunk = get_popup_rect((25, 20), f.size());
     clear_rect(f, chunk);
@@ -59,6 +66,9 @@ fn show_quit_popup(f: &mut Frame) {
     f.render_widget(text, chunk);
 }
 
+/// Show the reference lookup menu.
+///
+/// This could probably be moved to its own widget but I haven't done that yet.
 fn show_lookup(f: &mut Frame, app: &App) {
     let chunk = get_popup_rect((65, 55), f.size());
     clear_rect(f, chunk);
@@ -117,27 +127,30 @@ fn show_lookup(f: &mut Frame, app: &App) {
     }
 }
 
+/// Render all ui widgets using the data located in `app`.
 pub fn render(app: &mut App, f: &mut Frame) {
-    let vchunks = Layout::default()
+    // Create layouts
+    let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![Constraint::Length(3), Constraint::Min(1)])
         .split(f.size());
 
-    let hchunks = Layout::default()
+    let stat_split = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![Constraint::Length(9), Constraint::Min(1)])
-        .split(vchunks[1]);
+        .split(main_chunks[1]);
 
-    let statchunk = Layout::default()
+    let stat_vertical_bound = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![Constraint::Length(19), Constraint::Min(1)])
-        .split(hchunks[0]);
+        .split(stat_split[0]);
 
-    let rchunks = Layout::default()
+    let info_tab_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![Constraint::Length(3), Constraint::Min(1)])
-        .split(hchunks[1]);
+        .split(stat_split[1]);
 
+    // Render player bar
     let top_bar = PlayerBar::new(&app.player).editing(app.editing).highlight(
         if let Some(Selected::TopBarItem(i)) = app.selected {
             Some(i as u8)
@@ -145,8 +158,9 @@ pub fn render(app: &mut App, f: &mut Frame) {
             None
         },
     );
-    f.render_widget(top_bar, vchunks[0]);
+    f.render_widget(top_bar, main_chunks[0]);
 
+    // Render stat block
     let stat_block = StatBlock::new(&app.player.stats)
         .editing(app.editing)
         .highlight(if let Some(Selected::StatItem(i)) = app.selected {
@@ -154,8 +168,9 @@ pub fn render(app: &mut App, f: &mut Frame) {
         } else {
             None
         });
-    f.render_widget(stat_block, statchunk[0]);
+    f.render_widget(stat_block, stat_vertical_bound[0]);
 
+    // Render player info bar
     let info_block = InfoBar::new(&app.player).editing(app.editing).highlight(
         if let Some(Selected::InfoItem(i)) = app.selected {
             Some(i as u8)
@@ -163,8 +178,9 @@ pub fn render(app: &mut App, f: &mut Frame) {
             None
         },
     );
-    f.render_widget(info_block, rchunks[0]);
+    f.render_widget(info_block, info_tab_chunks[0]);
 
+    // Render the tab panel
     let tab_block = TabPanel::new(&app.player, app.current_tab)
         .scroll(app.vscroll as u16)
         .editing(app.editing)
@@ -173,7 +189,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         } else {
             None
         });
-    f.render_widget(tab_block, rchunks[1]);
+    f.render_widget(tab_block, info_tab_chunks[1]);
 
     if let Some(Selected::Quitting) = app.selected {
         show_quit_popup(f);

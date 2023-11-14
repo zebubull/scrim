@@ -16,7 +16,7 @@ pub struct Tui {
 }
 
 impl Tui {
-    /// Constructs a new instance of [`Tui`]
+    /// Constructs a new instance of `Tui`
     pub fn new(terminal: CrosstermTerminal, events: EventHandler) -> Self {
         Self { terminal, events }
     }
