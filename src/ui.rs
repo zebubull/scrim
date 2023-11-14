@@ -110,7 +110,7 @@ fn show_lookup(f: &mut Frame, app: &App) {
             let desc = Paragraph::new(format!("{}", entry.description))
                 .black()
                 .alignment(Alignment::Center)
-                .scroll((app.lookup_scroll, 0))
+                .scroll((app.lookup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(desc, vchunks[3]);
         }
@@ -166,7 +166,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     f.render_widget(info_block, rchunks[0]);
 
     let tab_block = TabPanel::new(&app.player, app.current_tab)
-        .scroll(app.vscroll)
+        .scroll(app.vscroll as u16)
         .editing(app.editing)
         .highlight(if let Some(Selected::TabItem(i)) = app.selected {
             Some(i as u16)

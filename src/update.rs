@@ -1,7 +1,6 @@
 use crate::app::{App, ControlType, Selected, Tab};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
-use std::cmp::{max, min};
 
 pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
     if app.editing {
@@ -10,10 +9,8 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
             return Ok(());
         }
 
-        use ControlType::*;
-        match app.control_type {
-            Some(TextInput) => {
-                let text = app.get_current_string()?;
+        match app.get_selected_type() {
+            Some(ControlType::TextInput(text)) => {
                 match key_event.code {
                     KeyCode::Backspace => {
                         text.pop();
@@ -24,10 +21,24 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     _ => {}
                 };
             }
-            Some(NextPrev) => {
+            Some(ControlType::Cycle(value, min, max)) => {
                 match key_event.code {
-                    KeyCode::Char('j') => app.cycle_current_prev()?,
-                    KeyCode::Char('k') => app.cycle_current_next()?,
+                    KeyCode::Char('j') => *value = std::cmp::max(min, value.saturating_sub(1)),
+                    KeyCode::Char('k') => *value = std::cmp::min(max, value.saturating_add(1)),
+                    _ => {}
+                };
+
+                // Stats and may have changed so we need to do this. It might
+                // be better to change stat and level to CycleFn but i'm too lazy
+                // to check if that's faster and the calculations are relatively light
+                app.player.update_stat_dependants();
+                app.player.update_level_dependants();
+            }
+            Some(ControlType::CycleFn(prev, next)) => {
+                match key_event.code {
+                    // As of right now, all of the cycles should be reversed for natural scrolling
+                    KeyCode::Char('j') => next(app),
+                    KeyCode::Char('k') => prev(app),
                     _ => {}
                 };
             }
@@ -48,20 +59,20 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 return Ok(());
             }
             KeyCode::Char('S') => app.save_player()?,
-            KeyCode::Char('1') => app.update_tab(Tab::Notes),
-            KeyCode::Char('2') => app.update_tab(Tab::Inventory),
-            KeyCode::Char('3') => app.update_tab(Tab::Spells),
+            KeyCode::Char('1') => app.update_tab(Tab::Notes)?,
+            KeyCode::Char('2') => app.update_tab(Tab::Inventory)?,
+            KeyCode::Char('3') => app.update_tab(Tab::Spells)?,
             _ => {}
         }
 
         match app.selected {
             Some(Selected::TopBarItem(item)) => match key_event.code {
                 KeyCode::Char('h') => {
-                    let item = max(0, item - 1);
+                    let item = item.saturating_sub(1);
                     app.selected = Some(Selected::TopBarItem(item));
                 }
                 KeyCode::Char('l') => {
-                    let item = min(4, item + 1);
+                    let item = std::cmp::min(4, item + 1);
                     app.selected = Some(Selected::TopBarItem(item));
                 }
                 KeyCode::Enter => {
@@ -71,11 +82,11 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
             },
             Some(Selected::StatItem(item)) => match key_event.code {
                 KeyCode::Char('k') => {
-                    let item = max(0, item - 1);
+                    let item = item.saturating_sub(1);
                     app.selected = Some(Selected::StatItem(item));
                 }
                 KeyCode::Char('j') => {
-                    let item = min(5, item + 1);
+                    let item = std::cmp::min(5, item + 1);
                     app.selected = Some(Selected::StatItem(item));
                 }
                 KeyCode::Enter => {
@@ -85,11 +96,11 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
             },
             Some(Selected::InfoItem(item)) => match key_event.code {
                 KeyCode::Char('h') => {
-                    let item = max(0, item - 1);
+                    let item = item.saturating_sub(1);
                     app.selected = Some(Selected::InfoItem(item));
                 }
                 KeyCode::Char('l') => {
-                    let item = min(6, item + 1);
+                    let item = std::cmp::min(6, item + 1);
                     app.selected = Some(Selected::InfoItem(item));
                 }
                 KeyCode::Char('r') => {
@@ -102,48 +113,23 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 }
                 _ => {}
             },
-            Some(Selected::TabItem(item)) => match key_event.code {
-                KeyCode::Char('k') => {
-                    let item = max(0, item - 1);
-                    app.selected = Some(Selected::TabItem(item));
-                    if (item as u16) < app.vscroll {
-                        app.vscroll -= 1;
-                    }
-                }
-                KeyCode::Char('j') => {
-                    let item = min(app.current_tab_len() as i16 - 1, item + 1);
-                    app.selected = Some(Selected::TabItem(item));
-                    if item as u16 >= app.viewport_height + app.vscroll {
-                        app.vscroll += 1;
-                    }
-                }
-                KeyCode::Char('K') => {
-                    let item = max(0, item - 10);
-                    app.selected = Some(Selected::TabItem(item));
-                    if (item as u16) < app.vscroll {
-                        app.vscroll = item as u16;
-                    }
-                }
-                KeyCode::Char('J') => {
-                    let item = min(app.current_tab_len() as i16 - 1, item + 10);
-                    app.selected = Some(Selected::TabItem(item));
-                    if item as u16 >= app.viewport_height + app.vscroll {
-                        app.vscroll += item as u16 - (app.viewport_height + app.vscroll) + 1;
-                        // Don't really know why but it crashes without the +1
-                    }
-                }
+            Some(Selected::TabItem(_)) => match key_event.code {
+                KeyCode::Char('k') => app.update_item_scroll(-1)?,
+                KeyCode::Char('j') => app.update_item_scroll(1)?,
+                KeyCode::Char('K') => app.update_item_scroll(-10)?,
+                KeyCode::Char('J') => app.update_item_scroll(10)?,
                 KeyCode::Char('a') => {
-                    app.add_item_to_tab()?;
+                    app.append_item_to_tab()?;
                     app.editing = true;
                 }
-                KeyCode::Char('i') if app.can_edit_tab() => {
+                KeyCode::Char('i') => {
                     app.insert_item_to_tab()?;
                     app.editing = true;
                 }
-                KeyCode::Char('d') if app.can_edit_tab() => {
+                KeyCode::Char('d') if app.current_tab().len() > 0 => {
                     app.delete_item_from_tab()?;
                 }
-                KeyCode::Enter if app.can_edit_tab() => {
+                KeyCode::Enter if app.current_tab().len() > 0 => {
                     app.editing = true;
                 }
                 KeyCode::Char('l') => app.lookup_current_selection()?,
@@ -164,7 +150,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
             Some(Selected::ItemLookup(_)) => match key_event.code {
                 KeyCode::Char('j') => app.lookup_scroll += 1,
                 KeyCode::Char('k') => {
-                    app.lookup_scroll = app.lookup_scroll.checked_sub(1).unwrap_or(0)
+                    app.lookup_scroll = app.lookup_scroll.saturating_sub(1);
                 }
                 KeyCode::Char('q') => {
                     let idx = match app.selected {
@@ -180,34 +166,14 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Char('b') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
-                KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll as i16)),
-                KeyCode::Char('k') => {
-                    app.vscroll = app.vscroll.checked_sub(1).unwrap_or(0);
-                }
-                KeyCode::Char('j') => {
-                    app.vscroll = std::cmp::min(
-                        app.vscroll + 1,
-                        app.current_tab_len()
-                            .checked_sub(app.viewport_height as usize)
-                            .unwrap_or(0) as u16,
-                    );
-                }
-                KeyCode::Char('K') => {
-                    app.vscroll = app.vscroll.checked_sub(10).unwrap_or(0);
-                }
-                KeyCode::Char('J') => {
-                    app.vscroll = std::cmp::min(
-                        app.vscroll + 10,
-                        app.current_tab_len()
-                            .checked_sub(app.viewport_height as usize)
-                            .unwrap_or(0) as u16,
-                    );
-                }
+                KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll)),
+                KeyCode::Char('k') => app.update_overview_scroll(-1),
+                KeyCode::Char('j') => app.update_overview_scroll(1),
+                KeyCode::Char('K') => app.update_overview_scroll(-10),
+                KeyCode::Char('J') => app.update_overview_scroll(10),
                 _ => {}
             },
         }
-
-        app.update_selected_type();
     }
     Ok(())
 }

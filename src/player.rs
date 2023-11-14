@@ -92,17 +92,31 @@ crate::impl_cycle!(Background);
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Stats {
     #[serde(default)]
-    pub strength: u8,
+    pub strength: u32,
     #[serde(default)]
-    pub dexterity: u8,
+    pub dexterity: u32,
     #[serde(default)]
-    pub constitution: u8,
+    pub constitution: u32,
     #[serde(default)]
-    pub intelligence: u8,
+    pub intelligence: u32,
     #[serde(default)]
-    pub wisdom: u8,
+    pub wisdom: u32,
     #[serde(default)]
-    pub charisma: u8,
+    pub charisma: u32,
+}
+
+impl Stats {
+    pub fn nth(&mut self, idx: u32) -> &mut u32 {
+        match idx {
+            0 => &mut self.strength,
+            1 => &mut self.dexterity,
+            2 => &mut self.constitution,
+            3 => &mut self.intelligence,
+            4 => &mut self.wisdom,
+            5 => &mut self.charisma,
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl Default for Stats {
@@ -119,7 +133,7 @@ impl Default for Stats {
 }
 
 impl IntoIterator for Stats {
-    type Item = u8;
+    type Item = u32;
     type IntoIter = StatsIter;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -136,7 +150,7 @@ pub struct StatsIter {
 }
 
 impl Iterator for StatsIter {
-    type Item = u8;
+    type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
         let ret = match self.idx {
@@ -161,7 +175,7 @@ pub struct Player {
     #[serde(default)]
     pub class: Class,
     #[serde(default)]
-    pub level: u8,
+    pub level: u32,
     #[serde(default)]
     pub background: Background,
     #[serde(default)]
@@ -169,9 +183,9 @@ pub struct Player {
     #[serde(default)]
     pub stats: Stats,
     #[serde(default)]
-    pub hit_dice: u8,
+    pub hit_dice: u32,
     #[serde(default)]
-    pub hit_dice_remaining: u8,
+    pub hit_dice_remaining: u32,
     #[serde(default)]
     pub race: Race,
     #[serde(default)]
@@ -181,18 +195,18 @@ pub struct Player {
     #[serde(default)]
     pub spells: Vec<String>,
     #[serde(default)]
-    pub hp: u16,
+    pub hp: u32,
     #[serde(default)]
-    pub ac: u8,
+    pub ac: u32,
     #[serde(default)]
-    pub temp_hp: u16,
+    pub temp_hp: u32,
     #[serde(default)]
-    pub max_hp: u16,
+    pub max_hp: u32,
     #[serde(default)]
-    pub prof_bonus: u8,
+    pub prof_bonus: u32,
 }
 
-fn avg_roll(dice: u8) -> u8 {
+fn avg_roll(dice: u32) -> u32 {
     match dice {
         6 => 4,
         8 => 5,
@@ -203,34 +217,35 @@ fn avg_roll(dice: u8) -> u8 {
 }
 
 impl Player {
-    /// Recalculate all class dependant values
-    pub fn recalculate_class(&mut self) {
+    pub fn update_class(&mut self, class: Class) {
         use Class::*;
+        self.class = class;
         self.hit_dice = match self.class {
             Sorcerer | Wizard => 6,
             Artificer | Bard | Cleric | Druid | Monk | Rogue | Warlock => 8,
             Fighter | Paladin | Ranger => 10,
             Barbarian => 12,
         };
-        self.max_hp = self.hit_dice as u16
-            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
-            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
+
+        self.update_hp();
     }
 
-    /// Recalculate all level dependant values
-    pub fn recalculate_level(&mut self) {
+    pub fn update_level_dependants(&mut self) {
         self.hit_dice_remaining = std::cmp::min(self.level, self.hit_dice_remaining + 1);
-        self.prof_bonus = (self.level as f32 / 4.0).ceil() as u8 + 1;
-        self.max_hp = self.hit_dice as u16
-            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
-            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
+        self.prof_bonus = (self.level as f32 / 4.0).ceil() as u32 + 1;
+
+        self.update_hp();
     }
 
-    /// Recalculate all level dependant values
-    pub fn recalculate_stats(&mut self) {
-        self.max_hp = self.hit_dice as u16
-            + (avg_roll(self.hit_dice) as u16 * (self.level as u16 - 1))
-            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u16 * self.level as u16;
+    pub fn update_stat_dependants(&mut self) {
+        self.update_hp();
+    }
+
+    fn update_hp(&mut self) {
+        self.max_hp = self.hit_dice as u32
+            + (avg_roll(self.hit_dice) as u32 * (self.level as u32 - 1))
+            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u32 * self.level as u32;
+        self.hp = std::cmp::min(self.hp, self.max_hp);
     }
 }
 

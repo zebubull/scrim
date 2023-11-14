@@ -1,5 +1,6 @@
 # This file scrapes http://dnd5e.wikidot.com for a list of all 5e spells
 # It is not the fastest but it works, just trust me on this one
+# NOTE: spell level and school parsing sometimes fails, this needs to be fixed
 
 from bs4 import BeautifulSoup as soupme
 import urllib.request as req

@@ -292,7 +292,7 @@
  },
  "beast bond": {
  "name": "Beast Bond",
- "description_short": "Source: Xanathar's Guide to Everything\nNone\n",
+ "description_short": "Source: Xanathar's Guide to Everything\n1st-level divination\n",
  "description": "You establish a telepathic link with one beast you touch that is friendly to you or charmed by you. The spell fails if the beast\u2019s Intelligence is 4 or higher. Until the spell ends, the link is active while you and the beast are within line of sight of each other. Through the link, the beast can understand your telepathic messages to it, and it can telepathically communicate simple emotions and concepts back to you. While the link is active, the beast gains advantage on attack rolls against any creature within 5 feet of you that you can see.\n\nSpell Lists. Druid, Ranger"
  },
  "bless": {
@@ -352,7 +352,7 @@
  },
  "comprehend languages": {
  "name": "Comprehend Languages",
- "description_short": "Source: Player's Handbook\nNone\n",
+ "description_short": "Source: Player's Handbook\n1st-level divination (ritual)\n",
  "description": "For the duration, you understand the literal meaning of any spoken language that you hear. You also understand any written language that you see, but you must be touching the surface on which the words are written. It takes about 1 minute to read one page of text.\n\nThis spell doesn\u2019t decode secret messages in a text or glyph, such as an arcane sigil, that isn\u2019t part of a written language.\n\nSpell Lists. Bard, Sorcerer, Warlock, Wizard"
  },
  "create or destroy water": {
@@ -367,17 +367,17 @@
  },
  "detect evil and good": {
  "name": "Detect Evil and Good",
- "description_short": "Source: Player's Handbook\nNone\n",
+ "description_short": "Source: Player's Handbook\n1st-level divination\n",
  "description": "For the duration, you know if there is an aberration, celestial, elemental, fey, fiend, or undead within 30 feet of you, as well as where the creature is located. Similarly, you know if there is a place or object within 30 feet of you that has been magically consecrated or desecrated.\n\nThe spell can penetrate most barriers, but it is blocked by 1 foot of stone, 1 inch of common metal, a thin sheet of lead, or 3 feet of wood or dirt.\n\nSpell Lists. Cleric, Paladin"
  },
  "detect magic": {
  "name": "Detect Magic",
- "description_short": "Source: Player's Handbook\nNone\n",
+ "description_short": "Source: Player's Handbook\n1st-level divination (ritual)\n",
  "description": "For the duration, you sense the presence of magic within 30 feet of you. If you sense magic in this way, you can use your action to see a faint aura around any visible creature or object in the area that bears magic, and you learn its school of magic, if any.\n\nThe spell can penetrate most barriers, but is blocked by 1 foot of stone, 1 inch of common metal, a thin sheet of lead, or 3 feet of wood or dirt.\n\nSpell Lists. Artificer, Bard, Cleric, Druid, Paladin, Ranger, Sorcerer, Wizard"
  },
  "detect poison and disease": {
  "name": "Detect Poison and Disease",
- "description_short": "Source: Player's Handbook\nNone\n",
+ "description_short": "Source: Player's Handbook\n1st-level divination (ritual)\n",
  "description": "For the duration, you can sense the presence and location of poisons, poisonous creatures, and diseases within 30 feet of you. You also identify the kind of poison, poisonous creature, or disease in each case.\n\nThe spell can penetrate most barriers, but is blocked by 1 foot of stone, 1 inch of common metal, a thin sheet of lead, or 3 feet of wood or dirt.\n\nSpell Lists. Cleric, Druid, Paladin, Ranger"
  },
  "disguise self": {
