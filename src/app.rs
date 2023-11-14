@@ -87,8 +87,8 @@ impl App {
 
     pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
         // tab frame size
-        self.viewport_height = height - 10;
-        self.update_scroll()?;
+        self.viewport_height = height - 9;
+        self.refresh_scroll()?;
         Ok(())
     }
 
@@ -103,7 +103,7 @@ impl App {
         if let Some(Selected::TabItem(idx)) = self.selected {
             self.selected = Some(Selected::TabItem(std::cmp::min(
                 idx,
-                self.current_tab_len() as i16,
+                self.current_tab_len() as i16 - 1,
             )));
         }
     }
@@ -138,7 +138,7 @@ impl App {
             }
         }
 
-        self.update_scroll()?;
+        self.refresh_scroll()?;
         Ok(())
     }
 
@@ -146,7 +146,7 @@ impl App {
         use Tab::*;
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot insert while not a tab is not selected")),
+            _ => return Err(eyre!("cannot insert while a tab is not selected")),
         } as usize;
 
         match self.current_tab {
@@ -161,7 +161,7 @@ impl App {
             }
         }
 
-        self.update_scroll()?;
+        self.refresh_scroll()?;
         Ok(())
     }
 
@@ -169,7 +169,7 @@ impl App {
         use Tab::*;
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot insert while not a tab is not selected")),
+            _ => return Err(eyre!("cannot delete while a tab is not selected")),
         } as usize;
 
         if self.current_tab_len() == 0 {
@@ -192,11 +192,11 @@ impl App {
             self.selected = Some(Selected::TabItem(item as i16 - 1));
         }
 
-        self.update_scroll()?;
+        self.refresh_scroll()?;
         Ok(())
     }
 
-    pub fn update_scroll(&mut self) -> Result<()> {
+    fn refresh_scroll(&mut self) -> Result<()> {
         use Tab::*;
         let len = match self.current_tab {
             Notes => self.player.notes.len(),
@@ -209,9 +209,9 @@ impl App {
             _ => 0,
         } as u16;
 
-        if len < self.viewport_height || selected < self.viewport_height {
+        if len < self.viewport_height {
             self.vscroll = 0;
-        } else {
+        } else if selected >= self.vscroll + self.viewport_height {
             self.vscroll = selected - self.viewport_height + 1;
         }
 

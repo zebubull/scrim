@@ -30,7 +30,12 @@ impl Lookup {
         }
     }
     pub fn load(&mut self) -> Result<()> {
-        let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| format!("failed to read lookups from '{}'", self.load_path.to_string_lossy()))?;
+        let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| {
+            format!(
+                "failed to read lookups from '{}'",
+                self.load_path.to_string_lossy()
+            )
+        })?;
 
         files
             .filter_map(|f| match f {

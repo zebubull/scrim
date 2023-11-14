@@ -117,6 +117,21 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                         app.vscroll += 1;
                     }
                 }
+                KeyCode::Char('K') => {
+                    let item = max(0, item - 10);
+                    app.selected = Some(Selected::TabItem(item));
+                    if (item as u16) < app.vscroll {
+                        app.vscroll = item as u16;
+                    }
+                }
+                KeyCode::Char('J') => {
+                    let item = min(app.current_tab_len() as i16 - 1, item + 10);
+                    app.selected = Some(Selected::TabItem(item));
+                    if item as u16 >= app.viewport_height + app.vscroll {
+                        app.vscroll += item as u16 - (app.viewport_height + app.vscroll) + 1;
+                        // Don't really know why but it crashes without the +1
+                    }
+                }
                 KeyCode::Char('a') => {
                     app.add_item_to_tab()?;
                     app.editing = true;
@@ -172,6 +187,17 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 KeyCode::Char('j') => {
                     app.vscroll = std::cmp::min(
                         app.vscroll + 1,
+                        app.current_tab_len()
+                            .checked_sub(app.viewport_height as usize)
+                            .unwrap_or(0) as u16,
+                    );
+                }
+                KeyCode::Char('K') => {
+                    app.vscroll = app.vscroll.checked_sub(10).unwrap_or(0);
+                }
+                KeyCode::Char('J') => {
+                    app.vscroll = std::cmp::min(
+                        app.vscroll + 10,
                         app.current_tab_len()
                             .checked_sub(app.viewport_height as usize)
                             .unwrap_or(0) as u16,

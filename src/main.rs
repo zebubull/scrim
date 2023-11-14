@@ -16,20 +16,18 @@ fn main() -> Result<()> {
     let mut app = App::new();
 
     let args: Vec<_> = args().collect();
-    let path = if args.len() > 1 {
-        Some(&args[1])
-    } else {
-        None
-    };
+    let path = if args.len() > 1 { Some(&args[1]) } else { None };
 
     app.path = path.cloned();
 
     let mut lookup_path = PathBuf::new();
-    #[cfg(debug_assertions)] {
+    #[cfg(debug_assertions)]
+    {
         lookup_path.push("lookups/");
     }
 
-    #[cfg(not(debug_assertions))] {
+    #[cfg(not(debug_assertions))]
+    {
         lookup_path.push(home::home_dir().unwrap());
         lookup_path.push(".scrim/")
     }
@@ -56,7 +54,7 @@ fn main() -> Result<()> {
         // Handle events
         match tui.events.next().unwrap() {
             // Tick event is currently unused
-            Event::Tick => {},
+            Event::Tick => {}
             Event::Key(key_event) => update(&mut app, key_event)?,
             Event::Mouse(_) => {}
             Event::Resize(_, y) => app.update_viewport_height(y)?,

@@ -122,7 +122,7 @@ impl<'a> Widget for TabPanel<'a> {
 
         let text = if self.scroll == 0 {
             String::from("TOP")
-        } else if self.scroll == height as u16 {
+        } else if self.scroll == len as u16 - height as u16 {
             String::from("BOT")
         } else {
             format!("{}%", self.scroll * 100 / (len as u16 - height as u16))
