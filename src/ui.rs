@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     prelude::{Constraint, Direction, Frame, Layout},
     style::{Color, Style, Stylize},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph, Wrap},
 };
 
@@ -69,9 +69,11 @@ fn show_quit_popup(f: &mut Frame) {
 /// Show the reference lookup menu.
 ///
 /// This could probably be moved to its own widget but I haven't done that yet.
-fn show_lookup(f: &mut Frame, app: &App) {
+fn show_lookup(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((65, 55), f.size());
     clear_rect(f, chunk);
+
+    app.popup_height = chunk.height as u32 - 4;
 
     let vchunks = Layout::default()
         .direction(Direction::Vertical)
@@ -120,9 +122,36 @@ fn show_lookup(f: &mut Frame, app: &App) {
             let desc = Paragraph::new(format!("{}", entry.description))
                 .black()
                 .alignment(Alignment::Center)
-                .scroll((app.lookup_scroll as u16, 0))
+                .scroll((app.popup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(desc, vchunks[3]);
+        }
+        LookupResult::Completion(entries) => {
+            let title = Paragraph::new(format!("{} results found", entries.len()))
+                .black()
+                .bold()
+                .alignment(Alignment::Center);
+            f.render_widget(title, vchunks[0]);
+
+            let mut lines: Vec<Line> = entries.iter()
+                .skip(app.popup_scroll as usize)
+                .take(app.popup_height as usize)
+                .map(|e| Line::from(Span::from(&e.name).on_yellow())).collect();
+
+            let selected = match app.selected {
+                Some(Selected::Completion(idx, _)) => idx as u32,
+                _ => 0,
+            };
+
+            lines[(selected - app.popup_scroll) as usize].spans[0].patch_style(Style::default()
+                .bg(Color::Black).fg(Color::Yellow));
+
+            let options = Paragraph::new(lines)
+                .black()
+                .alignment(Alignment::Center)
+                .scroll((app.popup_scroll as u16, 0))
+                .wrap(Wrap { trim: false });
+            f.render_widget(options, vchunks[3]);
         }
     }
 }
@@ -191,11 +220,9 @@ pub fn render(app: &mut App, f: &mut Frame) {
         });
     f.render_widget(tab_block, info_tab_chunks[1]);
 
-    if let Some(Selected::Quitting) = app.selected {
-        show_quit_popup(f);
-    }
-
-    if let Some(Selected::ItemLookup(_)) = app.selected {
-        show_lookup(f, app);
+    match app.selected {
+        Some(Selected::Completion(_, _)) | Some(Selected::ItemLookup(_)) => show_lookup(f, app),
+        Some(Selected::Quitting) => show_quit_popup(f),
+        _ => {},
     }
 }

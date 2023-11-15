@@ -94,4 +94,14 @@ impl Lookup {
     pub fn get_entry(&self, name: &str) -> Option<&Rc<LookupEntry>> {
         self.entries.get(name)
     }
+
+    /// Search the lookup table for all possible completions for the given text
+    pub fn get_completions(&self, text: &str) -> Vec<Rc<LookupEntry>> {
+        self.entries.keys().filter_map(|e| {
+            if e.starts_with(text) {
+                return Some(self.entries.get(e).unwrap().clone());
+            }
+            None
+        }).collect()
+    }
 }

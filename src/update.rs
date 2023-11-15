@@ -1,9 +1,9 @@
-use crate::app::{App, ControlType, Selected, Tab};
+use crate::{app::{App, ControlType, Selected, Tab}, lookup::Lookup};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
 /// Process the given key event and update that app's state accordingly.
-pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
+pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()> {
     if app.editing {
         if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
             app.editing = false;
@@ -18,6 +18,13 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     }
                     KeyCode::Char(c) => {
                         text.push(c);
+                    }
+                    KeyCode::Tab => {
+                        if let Some(Selected::TabItem(item)) = app.selected {
+                            app.complete_current_selection(lookup)?;
+                            app.selected = Some(Selected::Completion(0, item));
+                            app.editing = false;
+                        }
                     }
                     _ => {}
                 };
@@ -118,7 +125,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 }
                 _ => {}
             },
-            Some(Selected::TabItem(_)) => match key_event.code {
+            Some(Selected::TabItem(item)) => match key_event.code {
                 KeyCode::Char('k') => app.update_item_scroll(-1)?,
                 KeyCode::Char('j') => app.update_item_scroll(1)?,
                 KeyCode::Char('K') => app.update_item_scroll(-10)?,
@@ -138,10 +145,32 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                     app.editing = true;
                 }
                 KeyCode::Char('l') if app.current_tab().len() > 0 => {
-                    app.lookup_current_selection()?
+                    app.lookup_current_selection(lookup)?
+                }
+                KeyCode::Tab => {
+                    app.complete_current_selection(lookup)?;
+                    app.selected = Some(Selected::Completion(0, item));
+                    app.editing = false;
                 }
                 _ => {}
             },
+            Some(Selected::Completion(_, tab_idx)) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_scroll(1)?,
+                KeyCode::Char('k') => app.update_popup_scroll(-1)?,
+                KeyCode::Char('J') => app.update_popup_scroll(10)?,
+                KeyCode::Char('K') => app.update_popup_scroll(-10)?,
+                KeyCode::Enter => {
+                    app.finish_completion();
+                    app.current_lookup = None;
+                    app.selected = Some(Selected::TabItem(tab_idx))
+                }
+                KeyCode::Char('q') => {
+                    app.selected = Some(Selected::TabItem(tab_idx));
+                    app.editing = true;
+                    app.current_lookup = None;
+                }
+                _ => {}
+            }
             Some(Selected::Quitting) => match key_event.code {
                 KeyCode::Char('n') => app.selected = None,
                 KeyCode::Char('q') => app.quit(),
@@ -154,17 +183,13 @@ pub fn update(app: &mut App, key_event: KeyEvent) -> Result<()> {
                 }
                 _ => {}
             },
-            Some(Selected::ItemLookup(_)) => match key_event.code {
-                KeyCode::Char('j') => app.lookup_scroll += 1,
-                KeyCode::Char('k') => {
-                    app.lookup_scroll = app.lookup_scroll.saturating_sub(1);
-                }
+            Some(Selected::ItemLookup(tab_idx)) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_overview_scroll(1),
+                KeyCode::Char('k') => app.update_popup_overview_scroll(-1),
+                KeyCode::Char('J') => app.update_popup_overview_scroll(10),
+                KeyCode::Char('K') => app.update_popup_overview_scroll(-10),
                 KeyCode::Char('q') => {
-                    let idx = match app.selected {
-                        Some(Selected::ItemLookup(idx)) => idx,
-                        _ => unreachable!(),
-                    };
-                    app.selected = Some(Selected::TabItem(idx));
+                    app.selected = Some(Selected::TabItem(tab_idx));
                     app.current_lookup = None;
                 }
                 _ => {}

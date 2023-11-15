@@ -31,7 +31,10 @@ fn main() -> Result<()> {
         lookup_path.push(home::home_dir().unwrap());
         lookup_path.push(".scrim/")
     }
-    app.lookup = Lookup::new(lookup_path);
+    let mut lookup = Lookup::new(lookup_path);
+
+    println!("loading database...");
+    lookup.load()?;
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
@@ -55,7 +58,7 @@ fn main() -> Result<()> {
         match tui.events.next().unwrap() {
             // Tick event is currently unused
             Event::Tick => {}
-            Event::Key(key_event) => update(&mut app, key_event)?,
+            Event::Key(key_event) => update(&mut app, &lookup, key_event)?,
             Event::Mouse(_) => {}
             Event::Resize(_, y) => app.update_viewport_height(y)?,
         };
