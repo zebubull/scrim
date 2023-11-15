@@ -1,4 +1,5 @@
 use std::env::args;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use scrim::app::App;
@@ -31,9 +32,11 @@ fn main() -> Result<()> {
         lookup_path.push(home::home_dir().unwrap());
         lookup_path.push(".scrim/")
     }
+
+    println!("loading lookup tables...");
+    std::io::stdout().flush()?;
     let mut lookup = Lookup::new(lookup_path);
 
-    println!("loading database...");
     lookup.load()?;
 
     let backend = CrosstermBackend::new(std::io::stdout());
@@ -66,10 +69,6 @@ fn main() -> Result<()> {
 
     // Quit the app
     tui.exit().unwrap();
-
-    if path.is_some() || !app.player.name.is_empty() {
-        app.save_player()?;
-    }
 
     Ok(())
 }

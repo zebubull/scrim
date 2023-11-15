@@ -117,11 +117,11 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             f.render_widget(title, vchunks[0]);
             let short = Paragraph::new(format!("{}", entry.description_short))
                 .black()
-                .alignment(Alignment::Center);
+                .alignment(Alignment::Left);
             f.render_widget(short, vchunks[1]);
             let desc = Paragraph::new(format!("{}", entry.description))
                 .black()
-                .alignment(Alignment::Center)
+                .alignment(Alignment::Left)
                 .scroll((app.popup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(desc, vchunks[3]);

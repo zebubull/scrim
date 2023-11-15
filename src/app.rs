@@ -122,7 +122,7 @@ impl App {
     /// new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
-        let path = format!("{}", self.path.as_ref().unwrap_or(&self.player.name));
+        let path = format!("{}", self.path.as_ref().unwrap_or(&format!("{}.player", self.player.name)));
         std::fs::write(path, data)?;
         Ok(())
     }
