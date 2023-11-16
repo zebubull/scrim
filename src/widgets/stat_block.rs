@@ -2,7 +2,10 @@ use ratatui::{
     layout::Alignment,
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Widget, block::{Title, Position}},
+    widgets::{
+        block::{Position, Title},
+        Block, Borders, Paragraph, Widget,
+    },
 };
 
 use crate::{player::Stats, widgets::colored_span};
