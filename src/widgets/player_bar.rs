@@ -48,11 +48,14 @@ impl<'a> Widget for PlayerBar<'a> {
         let mut items = vec![
             colored_span!(format!("Name: {: <5}", self.player.name), Color::Yellow),
             separator!(Color::Yellow),
-            colored_span!(format!("Race: {: <10}", self.player.race), Color::Yellow),
+            colored_span!(format!("(R)ace: {: <10}", self.player.race), Color::Yellow),
             separator!(Color::Yellow),
             colored_span!(format!("Level: {: <2}", self.player.level), Color::Yellow),
             separator!(Color::Yellow),
-            colored_span!(format!("Class: {: <10}", self.player.class), Color::Yellow),
+            colored_span!(
+                format!("(C)lass: {: <10}", self.player.class),
+                Color::Yellow
+            ),
             separator!(Color::Yellow),
             colored_span!(
                 format!("Alignment: {: <2}", self.player.alignment),

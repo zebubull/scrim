@@ -3,7 +3,16 @@ use serde_derive::{Deserialize, Serialize};
 use strum_macros::{Display, EnumCount};
 
 #[derive(
-    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    FromPrimitive,
+    Serialize,
+    Deserialize,
+    Display,
+    EnumCount,
+    PartialEq,
 )]
 pub enum Class {
     #[default]
@@ -72,6 +81,23 @@ pub enum Race {
     #[default]
     Human,
     Tiefling,
+}
+
+impl Race {
+    pub fn to_lookup_string(&self) -> &'static str {
+        use Race::*;
+        match self {
+            Dragonborn => "dragonborn",
+            HillDwarf | MountainDwarf => "dwarf",
+            WoodElf | HighElf | DarkElf => "elf",
+            HalfElf => "half-elf",
+            HalfOrc => "half-orc",
+            ForestGnome | RockGnome => "gnome",
+            LightfootHalfling | StoutHalfling => "halfling",
+            Human => "human",
+            Tiefling => "tiefling",
+        }
+    }
 }
 
 crate::impl_cycle!(Race);
@@ -175,6 +201,117 @@ impl Iterator for StatsIter {
     }
 }
 
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct SpellSlots {
+    pub first: u32,
+    pub second: u32,
+    pub third: u32,
+    pub fourth: u32,
+    pub fifth: u32,
+    pub sixth: u32,
+    pub seventh: u32,
+    pub eigth: u32,
+    pub ninth: u32,
+    pub warlock: u32,
+}
+
+macro_rules! get_slots {
+    ($i:ident, $n:literal) => {
+        if $i >= $n { 1 } else { 0 }
+    };
+
+    ($i:ident, $n:literal, $($ns:literal),+) => {
+        if $i >= $n { 1 } else { 0 } + get_slots!($i, $($ns),+)
+    }
+}
+
+impl SpellSlots {
+    pub fn from(level: u32, class: &Class) -> Self {
+        use Class::*;
+        match class {
+            Bard | Cleric | Wizard | Sorcerer | Druid => SpellSlots::from_full(level),
+            Artificer | Ranger | Paladin => SpellSlots::from_half(level),
+            Warlock => SpellSlots::warlock(level),
+            _ => Self::default(),
+        }
+    }
+
+    fn from_full(level: u32) -> Self {
+        Self {
+            first: get_slots!(level, 1, 1, 2, 3),
+            second: get_slots!(level, 3, 3, 4),
+            third: get_slots!(level, 5, 5, 6),
+            fourth: get_slots!(level, 7, 8, 9),
+            fifth: get_slots!(level, 9, 10, 18),
+            sixth: get_slots!(level, 11, 19),
+            seventh: get_slots!(level, 13, 20),
+            eigth: get_slots!(level, 15),
+            ninth: get_slots!(level, 17),
+            ..Self::default()
+        }
+    }
+
+    fn from_half(level: u32) -> Self {
+        Self {
+            first: get_slots!(level, 2, 2, 3, 5),
+            second: get_slots!(level, 5, 5, 7),
+            third: get_slots!(level, 9, 9, 11),
+            fourth: get_slots!(level, 13, 15, 17),
+            fifth: get_slots!(level, 17, 19),
+            ..Self::default()
+        }
+    }
+
+    fn warlock(level: u32) -> Self {
+        Self {
+            warlock: get_slots!(level, 1, 2, 11, 17),
+            ..Self::default()
+        }
+    }
+
+    pub fn warlock_slot_level(level: u32) -> u32 {
+        get_slots!(level, 1, 3, 7, 9)
+    }
+
+    pub fn nth(&self, idx: u32, class: &Class) -> u32 {
+        if let Class::Warlock = class {
+            self.warlock
+        } else {
+            match idx {
+                0 => self.first,
+                1 => self.second,
+                2 => self.third,
+                3 => self.fourth,
+                4 => self.fifth,
+                5 => self.sixth,
+                6 => self.seventh,
+                7 => self.eigth,
+                8 => self.ninth,
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    pub fn nth_mut(&mut self, idx: u32, class: &Class) -> &mut u32 {
+        if let Class::Warlock = class {
+            &mut self.warlock
+        } else {
+            match idx {
+                0 => &mut self.first,
+                1 => &mut self.second,
+                2 => &mut self.third,
+                3 => &mut self.fourth,
+                4 => &mut self.fifth,
+                5 => &mut self.sixth,
+                6 => &mut self.seventh,
+                7 => &mut self.eigth,
+                8 => &mut self.ninth,
+                _ => unreachable!(),
+            }
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Player {
@@ -229,6 +366,10 @@ pub struct Player {
     ///
     /// This value is automatically calculated using the player's level.
     pub prof_bonus: u32,
+    /// The maximum spells slots
+    pub spell_slots: SpellSlots,
+    /// The current remaining spell slots
+    pub spell_slots_remaining: SpellSlots,
 }
 
 /// Get the avg roll value for a given dice.
@@ -255,6 +396,8 @@ impl Player {
         };
 
         self.update_hp();
+        self.spell_slots = SpellSlots::from(self.level, &self.class);
+        self.spell_slots_remaining = self.spell_slots.clone();
     }
 
     /// Updates any level dependant values.
@@ -263,6 +406,8 @@ impl Player {
         self.prof_bonus = (self.level as f32 / 4.0).ceil() as u32 + 1;
 
         self.update_hp();
+        self.spell_slots = SpellSlots::from(self.level, &self.class);
+        self.spell_slots_remaining = self.spell_slots.clone();
     }
 
     /// Updates any stat dependant values.
@@ -302,6 +447,8 @@ impl Default for Player {
             temp_hp: 0,
             max_hp: 8,
             prof_bonus: 2,
+            spell_slots: SpellSlots::default(),
+            spell_slots_remaining: SpellSlots::default(),
         }
     }
 }

@@ -25,13 +25,15 @@ pub enum Selected {
     ///
     /// This holds a reference to the tab item that the lookup originated from.
     ItemLookup(u32),
-    /// The lookup menu is showing the player's current class.
+    /// The lookup menu is showing the player's current class or the player's race.
     ClassLookup,
     /// The completion menu is showing
     ///
     /// This holds a reference to the currently selected item and the tab item that
     /// the completion frame originated from
     Completion(u32, u32),
+    /// The spell slots popup is showing
+    SpellSlots(u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -372,6 +374,21 @@ impl App {
         self.popup_scroll = 0;
     }
 
+    /// Lookup the player's current race.
+    pub fn lookup_race(&mut self, lookup: &Lookup) {
+        let text = self.player.race.to_lookup_string();
+        let lookup = lookup.get_entry(&text);
+
+        // Probably shouldn't clone but the lifetimes were too confusing :(
+        self.current_lookup = match lookup {
+            Some(entry) => Some(LookupResult::Success(entry.clone())),
+            None => Some(LookupResult::Invalid(String::from(text))),
+        };
+
+        self.selected = Some(Selected::ClassLookup);
+        self.popup_scroll = 0;
+    }
+
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
         use Tab::*;
         let item = match self.selected {
@@ -429,7 +446,8 @@ impl App {
             | Some(Selected::Quitting)
             | Some(Selected::ItemLookup(_))
             | Some(Selected::Completion(_, _))
-            | Some(Selected::ClassLookup) => None,
+            | Some(Selected::ClassLookup)
+            | Some(Selected::SpellSlots(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(

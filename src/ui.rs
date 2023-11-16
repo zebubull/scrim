@@ -3,16 +3,18 @@ use ratatui::{
     prelude::{Constraint, Direction, Frame, Layout},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
 };
 
 use crate::{
     app::{App, LookupResult, Selected},
+    player::{Class, SpellSlots},
     widgets::{
         info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
     },
 };
 
+/// Get a rectangle for a popup with the given width and height percentages
 fn get_popup_rect((width, height): (u16, u16), parent: Rect) -> Rect {
     let hpart = Layout::default()
         .direction(Direction::Horizontal)
@@ -52,7 +54,7 @@ fn show_quit_popup(f: &mut Frame) {
     let chunk = get_popup_rect((25, 20), f.size());
     clear_rect(f, chunk);
 
-    let text = Paragraph::new("y - yes (save)\nq - yes (don't save)\nn - no")
+    let text = Paragraph::new("y - yes (save)\ns - yes (don't save)\nq/n - no")
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -70,7 +72,7 @@ fn show_quit_popup(f: &mut Frame) {
 ///
 /// This could probably be moved to its own widget but I haven't done that yet.
 fn show_lookup(f: &mut Frame, app: &mut App) {
-    let chunk = get_popup_rect((65, 55), f.size());
+    let chunk = get_popup_rect((55, 65), f.size());
     clear_rect(f, chunk);
 
     app.popup_height = chunk.height as u32 - 4;
@@ -158,6 +160,82 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
     }
 }
 
+/// Get the ordinal suffix corresponding to the given digit
+fn ordinal(n: u32) -> &'static str {
+    match n {
+        1 => "st",
+        2 => "nd",
+        3 => "rd",
+        _ => "th",
+    }
+}
+
+/// Show the player's spell slot menu
+///
+/// This could probably be moved to its own widget but I'm lazy :p
+fn show_spell_slots(f: &mut Frame, app: &mut App) {
+    let chunk = get_popup_rect((35, 75), f.size());
+    clear_rect(f, chunk);
+
+    let t = &app.player.spell_slots;
+    let r = &app.player.spell_slots_remaining;
+
+    let mut lines = if let Class::Warlock = app.player.class {
+        let level = SpellSlots::warlock_slot_level(app.player.level);
+        vec![Line::from(Span::from(
+            format!("{}{}: {} / {}", level, ordinal(level), t.warlock, r.warlock)
+                .black()
+                .on_yellow(),
+        ))]
+    } else {
+        (0..9)
+            .filter_map(|i| {
+                let total = t.nth(i, &app.player.class);
+                if total == 0 {
+                    None
+                } else {
+                    Some(Line::from(
+                        Span::from(format!(
+                            "{}{}: {} / {}",
+                            i + 1,
+                            ordinal(i + 1),
+                            r.nth(i, &app.player.class),
+                            total
+                        ))
+                        .on_yellow()
+                        .black(),
+                    ))
+                }
+            })
+            .collect()
+    };
+
+    if lines.len() == 0 {
+        lines.push(Line::from(Span::from("No spell slots").on_yellow().black()));
+    }
+
+    let selected = match app.selected {
+        Some(Selected::SpellSlots(idx)) => idx as u32,
+        _ => 0,
+    };
+
+    lines[(selected - app.popup_scroll) as usize].spans[0]
+        .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
+
+    let offset = lines.len();
+    let p = Paragraph::new(lines).alignment(Alignment::Center).block(
+        Block::default()
+            .title("Spell Slots")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL)
+            .on_yellow()
+            .black()
+            .padding(Padding::new(0, 0, chunk.height / 2 - offset as u16, 0)),
+    );
+
+    f.render_widget(p, chunk);
+}
+
 /// Render all ui widgets using the data located in `app`.
 pub fn render(app: &mut App, f: &mut Frame) {
     // Create layouts
@@ -227,6 +305,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         | Some(Selected::ItemLookup(_))
         | Some(Selected::ClassLookup) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
+        Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
         _ => {}
     }
 }

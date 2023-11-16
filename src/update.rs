@@ -1,6 +1,7 @@
 use crate::{
     app::{App, ControlType, Selected, Tab},
     lookup::Lookup,
+    player::Class,
 };
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -70,7 +71,11 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 if let Some(Selected::Quitting) = app.selected {
                     break 'quit;
                 }
-                app.selected = Some(Selected::Quitting);
+                if app.selected.is_none() {
+                    app.selected = Some(Selected::Quitting);
+                } else {
+                    app.selected = None;
+                }
                 return Ok(());
             }
             KeyCode::Char('S') => app.save_player()?,
@@ -175,8 +180,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 _ => {}
             },
             Some(Selected::Quitting) => match key_event.code {
-                KeyCode::Char('n') => app.selected = None,
-                KeyCode::Char('q') => app.quit(),
+                KeyCode::Char('q') | KeyCode::Char('n') => app.selected = None,
+                KeyCode::Char('s') => app.quit(),
                 KeyCode::Char('y') => {
                     if app.player.name.is_empty() {
                         app.player.name = String::from("player");
@@ -208,12 +213,64 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
+            Some(Selected::SpellSlots(idx)) => match key_event.code {
+                KeyCode::Char('a') => {
+                    let remaining = app
+                        .player
+                        .spell_slots_remaining
+                        .nth(idx, &app.player.class)
+                        .clone();
+                    let total = app.player.spell_slots.nth(idx, &app.player.class);
+                    *app.player
+                        .spell_slots_remaining
+                        .nth_mut(idx, &app.player.class) = std::cmp::min(remaining + 1, total)
+                }
+                KeyCode::Char('x') => {
+                    let remaining = app
+                        .player
+                        .spell_slots_remaining
+                        .nth(idx, &app.player.class)
+                        .clone();
+                    *app.player
+                        .spell_slots_remaining
+                        .nth_mut(idx, &app.player.class) = remaining.saturating_sub(1);
+                }
+                KeyCode::Char('A') => {
+                    *app.player.spell_slots.nth_mut(idx, &app.player.class) += 1;
+                }
+                KeyCode::Char('X') => {
+                    let new_total = app
+                        .player
+                        .spell_slots
+                        .nth(idx, &app.player.class)
+                        .clone()
+                        .saturating_sub(1);
+                    *app.player.spell_slots.nth_mut(idx, &app.player.class) = new_total;
+                    let remaining = app.player.spell_slots_remaining.nth(idx, &app.player.class);
+                    *app.player
+                        .spell_slots_remaining
+                        .nth_mut(idx, &app.player.class) = std::cmp::min(remaining, new_total);
+                }
+                KeyCode::Char('j') if app.player.class != Class::Warlock => {
+                    let new_idx = std::cmp::min(8, idx + 1);
+                    app.selected = Some(Selected::SpellSlots(new_idx));
+                }
+                KeyCode::Char('k') if app.player.class != Class::Warlock => {
+                    app.selected = Some(Selected::SpellSlots(idx.saturating_sub(1)));
+                }
+                KeyCode::Char('r') => {
+                    app.player.spell_slots_remaining = app.player.spell_slots.clone();
+                }
+                _ => {}
+            },
             None => match key_event.code {
                 KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll)),
+                KeyCode::Char('o') => app.selected = Some(Selected::SpellSlots(0)),
                 KeyCode::Char('C') => app.lookup_class(&lookup),
+                KeyCode::Char('R') => app.lookup_race(&lookup),
                 KeyCode::Char('k') => app.update_overview_scroll(-1),
                 KeyCode::Char('j') => app.update_overview_scroll(1),
                 KeyCode::Char('K') => app.update_overview_scroll(-10),
