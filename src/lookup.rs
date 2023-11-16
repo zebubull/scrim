@@ -43,7 +43,6 @@ impl Lookup {
 
     /// Load all lookup tables located in the directory specified by the load path.
     pub fn load(&mut self) -> Result<()> {
-        println!("loading lookup table...");
         let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| {
             format!(
                 "failed to read lookups from '{}'",
@@ -98,11 +97,14 @@ impl Lookup {
 
     /// Search the lookup table for all possible completions for the given text
     pub fn get_completions(&self, text: &str) -> Vec<Rc<LookupEntry>> {
-        self.entries.keys().filter_map(|e| {
-            if e.starts_with(text) {
-                return Some(self.entries.get(e).unwrap().clone());
-            }
-            None
-        }).collect()
+        self.entries
+            .keys()
+            .filter_map(|e| {
+                if e.starts_with(text) {
+                    return Some(self.entries.get(e).unwrap().clone());
+                }
+                None
+            })
+            .collect()
     }
 }

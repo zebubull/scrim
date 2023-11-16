@@ -133,18 +133,20 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .alignment(Alignment::Center);
             f.render_widget(title, vchunks[0]);
 
-            let mut lines: Vec<Line> = entries.iter()
+            let mut lines: Vec<Line> = entries
+                .iter()
                 .skip(app.popup_scroll as usize)
                 .take(app.popup_height as usize)
-                .map(|e| Line::from(Span::from(&e.name).on_yellow())).collect();
+                .map(|e| Line::from(Span::from(&e.name).on_yellow()))
+                .collect();
 
             let selected = match app.selected {
                 Some(Selected::Completion(idx, _)) => idx as u32,
                 _ => 0,
             };
 
-            lines[(selected - app.popup_scroll) as usize].spans[0].patch_style(Style::default()
-                .bg(Color::Black).fg(Color::Yellow));
+            lines[(selected - app.popup_scroll) as usize].spans[0]
+                .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
             let options = Paragraph::new(lines)
                 .black()
@@ -221,8 +223,10 @@ pub fn render(app: &mut App, f: &mut Frame) {
     f.render_widget(tab_block, info_tab_chunks[1]);
 
     match app.selected {
-        Some(Selected::Completion(_, _)) | Some(Selected::ItemLookup(_)) => show_lookup(f, app),
+        Some(Selected::Completion(_, _))
+        | Some(Selected::ItemLookup(_))
+        | Some(Selected::ClassLookup) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
-        _ => {},
+        _ => {}
     }
 }

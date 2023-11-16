@@ -1,5 +1,4 @@
 use std::env::args;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use scrim::app::App;
@@ -34,7 +33,6 @@ fn main() -> Result<()> {
     }
 
     println!("loading lookup tables...");
-    std::io::stdout().flush()?;
     let mut lookup = Lookup::new(lookup_path);
 
     lookup.load()?;

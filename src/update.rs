@@ -1,4 +1,7 @@
-use crate::{app::{App, ControlType, Selected, Tab}, lookup::Lookup};
+use crate::{
+    app::{App, ControlType, Selected, Tab},
+    lookup::Lookup,
+};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -145,7 +148,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.editing = true;
                 }
                 KeyCode::Char('l') if app.current_tab().len() > 0 => {
-                    app.lookup_current_selection(lookup)?
+                    app.lookup_current_selection(lookup)
                 }
                 KeyCode::Tab => {
                     app.complete_current_selection(lookup)?;
@@ -170,7 +173,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.current_lookup = None;
                 }
                 _ => {}
-            }
+            },
             Some(Selected::Quitting) => match key_event.code {
                 KeyCode::Char('n') => app.selected = None,
                 KeyCode::Char('q') => app.quit(),
@@ -194,11 +197,23 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
+            Some(Selected::ClassLookup) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_overview_scroll(1),
+                KeyCode::Char('k') => app.update_popup_overview_scroll(-1),
+                KeyCode::Char('J') => app.update_popup_overview_scroll(10),
+                KeyCode::Char('K') => app.update_popup_overview_scroll(-10),
+                KeyCode::Char('q') => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
+                _ => {}
+            },
             None => match key_event.code {
-                KeyCode::Char('b') => app.selected = Some(Selected::TopBarItem(0)),
+                KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll)),
+                KeyCode::Char('C') => app.lookup_class(&lookup),
                 KeyCode::Char('k') => app.update_overview_scroll(-1),
                 KeyCode::Char('j') => app.update_overview_scroll(1),
                 KeyCode::Char('K') => app.update_overview_scroll(-10),

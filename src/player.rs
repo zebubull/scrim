@@ -47,16 +47,27 @@ crate::impl_cycle!(Alignment);
 )]
 pub enum Race {
     Dragonborn,
+    #[strum(to_string = "Hill Dwarf")]
     HillDwarf,
+    #[strum(to_string = "Mountain Dwarf")]
     MountainDwarf,
+    #[strum(to_string = "High Elf")]
     HighElf,
+    #[strum(to_string = "Wood Elf")]
     WoodElf,
+    #[strum(to_string = "Dark Elf")]
     DarkElf,
+    #[strum(to_string = "Forest Gnome")]
     ForestGnome,
+    #[strum(to_string = "Rock Gnome")]
     RockGnome,
+    #[strum(to_string = "Half-Elf")]
     HalfElf,
+    #[strum(to_string = "Half-Orc")]
     HalfOrc,
+    #[strum(to_string = "Lightfoot Halfling")]
     LightfootHalfling,
+    #[strum(to_string = "Stout Halfling")]
     StoutHalfling,
     #[default]
     Human,
@@ -74,7 +85,9 @@ pub enum Background {
     Charlatan,
     Criminal,
     Entertainer,
+    #[strum(to_string = "Folk Hero")]
     FolkHero,
+    #[strum(to_string = "Guild Artisan")]
     GuildArtisan,
     Hermit,
     Knight,

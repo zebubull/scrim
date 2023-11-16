@@ -84,7 +84,7 @@ impl<'a> Widget for InfoBar<'a> {
         Paragraph::new(vec![line])
             .block(
                 Block::new()
-                    .title("Info")
+                    .title("Info (i)")
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL),
             )

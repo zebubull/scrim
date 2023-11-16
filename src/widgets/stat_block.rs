@@ -2,7 +2,7 @@ use ratatui::{
     layout::Alignment,
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Widget},
+    widgets::{Block, Borders, Paragraph, Widget, block::{Title, Position}},
 };
 
 use crate::{player::Stats, widgets::colored_span};
@@ -78,6 +78,7 @@ impl<'a> Widget for StatBlock<'a> {
                 Block::new()
                     .title("Stats")
                     .title_alignment(Alignment::Center)
+                    .title(Title::from("(s)").position(Position::Bottom))
                     .borders(Borders::ALL),
             )
             .alignment(Alignment::Center)

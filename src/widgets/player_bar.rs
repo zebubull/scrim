@@ -74,7 +74,7 @@ impl<'a> Widget for PlayerBar<'a> {
         Paragraph::new(vec![Line::from(items)])
             .block(
                 Block::new()
-                    .title("Player Sheet")
+                    .title("Player Sheet (u)")
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL),
             )

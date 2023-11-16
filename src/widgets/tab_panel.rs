@@ -101,7 +101,7 @@ impl<'a> Widget for TabPanel<'a> {
         Paragraph::new(lines)
             .block(
                 Block::new()
-                    .title(format!("{}", self.tab))
+                    .title(format!("{} (t)", self.tab))
                     .borders(Borders::ALL),
             )
             .alignment(Alignment::Left)

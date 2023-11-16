@@ -25,11 +25,13 @@ pub enum Selected {
     ///
     /// This holds a reference to the tab item that the lookup originated from.
     ItemLookup(u32),
+    /// The lookup menu is showing the player's current class.
+    ClassLookup,
     /// The completion menu is showing
-    /// 
+    ///
     /// This holds a reference to the currently selected item and the tab item that
     /// the completion frame originated from
-    Completion(u32, u32)
+    Completion(u32, u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -122,7 +124,12 @@ impl App {
     /// new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
-        let path = format!("{}", self.path.as_ref().unwrap_or(&format!("{}.player", self.player.name)));
+        let path = format!(
+            "{}",
+            self.path
+                .as_ref()
+                .unwrap_or(&format!("{}.player", self.player.name))
+        );
         std::fs::write(path, data)?;
         Ok(())
     }
@@ -288,7 +295,11 @@ impl App {
         let num_entries = match &self.current_lookup {
             Some(LookupResult::Completion(v)) => v.len(),
             Some(LookupResult::Invalid(_)) => return Ok(()),
-            _ => return Err(eyre!("current lookup does not support line-by-line scrolling")),
+            _ => {
+                return Err(eyre!(
+                    "current lookup does not support line-by-line scrolling"
+                ))
+            }
         } as u32;
 
         selected = selected.saturating_add_signed(amount).min(num_entries - 1);
@@ -321,11 +332,11 @@ impl App {
     /// Uses the current selected tab item to lookup a reference entry.
     ///
     /// This method does not perform any kind of caching.
-    pub fn lookup_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
+    pub fn lookup_current_selection(&mut self, lookup: &Lookup) {
         use Tab::*;
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
-            _ => return Ok(()),
+            _ => return,
         };
 
         let tab = match self.current_tab {
@@ -345,7 +356,20 @@ impl App {
 
         self.selected = Some(Selected::ItemLookup(item));
         self.popup_scroll = 0;
-        Ok(())
+    }
+
+    pub fn lookup_class(&mut self, lookup: &Lookup) {
+        let text = self.player.class.to_string().to_lowercase();
+        let lookup = lookup.get_entry(&text);
+
+        // Probably shouldn't clone but the lifetimes were too confusing :(
+        self.current_lookup = match lookup {
+            Some(entry) => Some(LookupResult::Success(entry.clone())),
+            None => Some(LookupResult::Invalid(text.clone())),
+        };
+
+        self.selected = Some(Selected::ClassLookup);
+        self.popup_scroll = 0;
     }
 
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
@@ -368,7 +392,11 @@ impl App {
         self.current_lookup = if lookup.len() > 0 {
             Some(LookupResult::Completion(lookup))
         } else {
-            Some(LookupResult::Invalid(format!("{}:{}", text.clone(), lookup.len())))
+            Some(LookupResult::Invalid(format!(
+                "{}:{}",
+                text.clone(),
+                lookup.len()
+            )))
         };
 
         self.selected = Some(Selected::ItemLookup(item));
@@ -386,7 +414,9 @@ impl App {
             Some(LookupResult::Completion(ref vec)) => vec,
             Some(LookupResult::Invalid(_)) => return,
             _ => unreachable!(),
-        }[comp_item as usize].name.clone(); // If there's a way to do this without a clone I don't know it
+        }[comp_item as usize]
+            .name
+            .clone(); // If there's a way to do this without a clone I don't know it
 
         let current = &mut self.current_tab_mut()[tab_item as usize];
         current.push_str(&completion[current.trim().len()..]);
@@ -395,7 +425,11 @@ impl App {
     /// Get the control type associated with the currently selected item.
     pub fn get_selected_type(&mut self) -> Option<ControlType> {
         match self.selected {
-            None | Some(Selected::Quitting) | Some(Selected::ItemLookup(_)) | Some(Selected::Completion(_, _)) => None,
+            None
+            | Some(Selected::Quitting)
+            | Some(Selected::ItemLookup(_))
+            | Some(Selected::Completion(_, _))
+            | Some(Selected::ClassLookup) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(
