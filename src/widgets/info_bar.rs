@@ -68,6 +68,8 @@ impl<'a> Widget for InfoBar<'a> {
                 format!("Background: {}", self.player.background),
                 Color::Yellow
             ),
+            separator!(Color::Yellow),
+            colored_span!("(F)unds", Color::Yellow),
         ]);
 
         if let Some(item) = self.highlight {

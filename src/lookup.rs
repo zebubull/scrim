@@ -1,8 +1,8 @@
 use color_eyre::eyre::{Result, WrapErr};
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Deserialize, Default, Clone)]
 pub struct LookupEntry {
     #[serde(default)]
     pub name: String,
@@ -12,7 +12,7 @@ pub struct LookupEntry {
     pub description: String,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Deserialize, Default)]
 pub struct Lookup {
     entries: HashMap<String, Rc<LookupEntry>>,
     #[serde(default)]

@@ -15,12 +15,12 @@ use strum_macros::{Display, EnumCount};
     PartialEq,
 )]
 pub enum Class {
-    #[default]
     Artificer,
     Bard,
     Barbarian,
     Cleric,
     Druid,
+    #[default]
     Fighter,
     Monk,
     Paladin,
@@ -131,12 +131,12 @@ crate::impl_cycle!(Background);
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Stats {
-    pub strength: u32,
-    pub dexterity: u32,
-    pub constitution: u32,
-    pub intelligence: u32,
-    pub wisdom: u32,
-    pub charisma: u32,
+    strength: u32,
+    dexterity: u32,
+    constitution: u32,
+    intelligence: u32,
+    wisdom: u32,
+    charisma: u32,
 }
 
 impl Stats {
@@ -156,12 +156,12 @@ impl Stats {
 impl Default for Stats {
     fn default() -> Self {
         Self {
-            strength: 10,
-            dexterity: 10,
-            constitution: 10,
-            intelligence: 10,
-            wisdom: 10,
-            charisma: 10,
+            strength: 11,
+            dexterity: 11,
+            constitution: 11,
+            intelligence: 11,
+            wisdom: 11,
+            charisma: 11,
         }
     }
 }
@@ -203,15 +203,15 @@ impl Iterator for StatsIter {
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct SpellSlots {
-    pub first: u32,
-    pub second: u32,
-    pub third: u32,
-    pub fourth: u32,
-    pub fifth: u32,
-    pub sixth: u32,
-    pub seventh: u32,
-    pub eigth: u32,
-    pub ninth: u32,
+    first: u32,
+    second: u32,
+    third: u32,
+    fourth: u32,
+    fifth: u32,
+    sixth: u32,
+    seventh: u32,
+    eigth: u32,
+    ninth: u32,
     pub warlock: u32,
 }
 
@@ -312,6 +312,36 @@ impl SpellSlots {
     }
 }
 
+#[derive(Default, Debug, Serialize, Deserialize)]
+pub struct Funds {
+    pp: u32,
+    gp: u32,
+    sp: u32,
+    cp: u32,
+}
+
+impl Funds {
+    pub fn nth(&self, idx: u32) -> u32 {
+        match idx {
+            0 => self.pp,
+            1 => self.gp,
+            2 => self.sp,
+            3 => self.cp,
+            _ => unreachable!()
+        }
+    }
+
+    pub fn nth_mut(&mut self, idx: u32) -> &mut u32 {
+        match idx {
+            0 => &mut self.pp,
+            1 => &mut self.gp,
+            2 => &mut self.sp,
+            3 => &mut self.cp,
+            _ => unreachable!()
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Player {
@@ -370,6 +400,8 @@ pub struct Player {
     pub spell_slots: SpellSlots,
     /// The current remaining spell slots
     pub spell_slots_remaining: SpellSlots,
+    /// The player's current funds,
+    pub funds: Funds,
 }
 
 /// Get the avg roll value for a given dice.
@@ -443,12 +475,13 @@ impl Default for Player {
             notes: vec![],
             spells: vec![],
             hp: 8,
-            ac: 0,
+            ac: 10,
             temp_hp: 0,
             max_hp: 8,
             prof_bonus: 2,
-            spell_slots: SpellSlots::default(),
-            spell_slots_remaining: SpellSlots::default(),
+            spell_slots: SpellSlots::from(1, &Class::Fighter),
+            spell_slots_remaining: SpellSlots::from(1, &Class::Fighter),
+            funds: Funds::default(),
         }
     }
 }

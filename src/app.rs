@@ -34,6 +34,8 @@ pub enum Selected {
     Completion(u32, u32),
     /// The spell slots popup is showing
     SpellSlots(u32),
+    /// The money popup is showing
+    Funds(u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -447,7 +449,8 @@ impl App {
             | Some(Selected::ItemLookup(_))
             | Some(Selected::Completion(_, _))
             | Some(Selected::ClassLookup)
-            | Some(Selected::SpellSlots(_)) => None,
+            | Some(Selected::SpellSlots(_))
+            | Some(Selected::Funds(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(

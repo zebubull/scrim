@@ -65,6 +65,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     _ => None,
                 };
                 app.current_lookup = None;
+                app.popup_scroll = 0;
                 return Ok(());
             }
             KeyCode::Char('q') if app.current_lookup.is_none() => 'quit: {
@@ -73,6 +74,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 if app.selected.is_none() {
                     app.selected = Some(Selected::Quitting);
+                    app.current_lookup = None;
+                    app.popup_scroll = 0;
                 } else {
                     app.selected = None;
                 }
@@ -263,12 +266,39 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
+            Some(Selected::Funds(idx)) => match key_event.code {
+                KeyCode::Char('a') => {
+                    let fundage = app.player.funds.nth_mut(idx);
+                    *fundage += 1;
+                }
+                KeyCode::Char('x') => {
+                    let fundage = app.player.funds.nth_mut(idx);
+                    *fundage = fundage.saturating_sub(1);
+                }
+                KeyCode::Char('A') => {
+                    let fundage = app.player.funds.nth_mut(idx);
+                    *fundage += 10;
+                }
+                KeyCode::Char('X') => {
+                    let fundage = app.player.funds.nth_mut(idx);
+                    *fundage = fundage.saturating_sub(10);
+                }
+                KeyCode::Char('j') if app.player.class != Class::Warlock => {
+                    let new_idx = std::cmp::min(3, idx + 1);
+                    app.selected = Some(Selected::Funds(new_idx));
+                }
+                KeyCode::Char('k') if app.player.class != Class::Warlock => {
+                    app.selected = Some(Selected::Funds(idx.saturating_sub(1)));
+                }
+                _ => {}
+            }
             None => match key_event.code {
                 KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll)),
-                KeyCode::Char('o') => app.selected = Some(Selected::SpellSlots(0)),
+                KeyCode::Char('P') => app.selected = Some(Selected::SpellSlots(0)),
+                KeyCode::Char('F') => app.selected = Some(Selected::Funds(0)),
                 KeyCode::Char('C') => app.lookup_class(&lookup),
                 KeyCode::Char('R') => app.lookup_race(&lookup),
                 KeyCode::Char('k') => app.update_overview_scroll(-1),

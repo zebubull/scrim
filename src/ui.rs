@@ -77,16 +77,6 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
     app.popup_height = chunk.height as u32 - 4;
 
-    let vchunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints(vec![
-            Constraint::Length(1),
-            Constraint::Length(2),
-            Constraint::Length(1),
-            Constraint::Min(1),
-        ])
-        .split(chunk);
 
     let block = Block::default()
         .title("Reference Lookup")
@@ -112,23 +102,51 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             );
         }
         LookupResult::Success(entry) => {
+            let render_short = entry.description_short.len() > 0;
+            let vchunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(1)
+                .constraints(if render_short {vec![
+                    Constraint::Length(1),
+                    Constraint::Length(2),
+                    Constraint::Length(1),
+                    Constraint::Min(1),
+                ]} else {
+                    vec![
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                        Constraint::Min(1),
+                    ]
+                })
+                .split(chunk);
             let title = Paragraph::new(format!("{}", entry.name))
                 .black()
                 .bold()
                 .alignment(Alignment::Center);
             f.render_widget(title, vchunks[0]);
-            let short = Paragraph::new(format!("{}", entry.description_short))
-                .black()
-                .alignment(Alignment::Left);
-            f.render_widget(short, vchunks[1]);
+            if render_short {
+                let short = Paragraph::new(format!("{}", entry.description_short))
+                    .black()
+                    .alignment(Alignment::Left);
+                f.render_widget(short, vchunks[1]);
+            }
             let desc = Paragraph::new(format!("{}", entry.description))
                 .black()
                 .alignment(Alignment::Left)
                 .scroll((app.popup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
-            f.render_widget(desc, vchunks[3]);
+            f.render_widget(desc, vchunks[if render_short { 3 } else { 2 }]);
         }
         LookupResult::Completion(entries) => {
+            let vchunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(1)
+                .constraints(vec![
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Min(1),
+                ])
+                .split(chunk);
             let title = Paragraph::new(format!("{} results found", entries.len()))
                 .black()
                 .bold()
@@ -155,7 +173,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .alignment(Alignment::Center)
                 .scroll((app.popup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
-            f.render_widget(options, vchunks[3]);
+            f.render_widget(options, vchunks[2]);
         }
     }
 }
@@ -189,30 +207,22 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
         ))]
     } else {
         (0..9)
-            .filter_map(|i| {
+            .map(|i| {
                 let total = t.nth(i, &app.player.class);
-                if total == 0 {
-                    None
-                } else {
-                    Some(Line::from(
-                        Span::from(format!(
-                            "{}{}: {} / {}",
-                            i + 1,
-                            ordinal(i + 1),
-                            r.nth(i, &app.player.class),
-                            total
-                        ))
-                        .on_yellow()
-                        .black(),
+                Line::from(
+                    Span::from(format!(
+                        "{}{}: {} / {}",
+                        i + 1,
+                        ordinal(i + 1),
+                        r.nth(i, &app.player.class),
+                        total
                     ))
-                }
+                    .on_yellow()
+                    .black(),
+                )
             })
             .collect()
     };
-
-    if lines.len() == 0 {
-        lines.push(Line::from(Span::from("No spell slots").on_yellow().black()));
-    }
 
     let selected = match app.selected {
         Some(Selected::SpellSlots(idx)) => idx as u32,
@@ -222,7 +232,7 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
     lines[(selected - app.popup_scroll) as usize].spans[0]
         .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
-    let offset = lines.len();
+    let offset = lines.len() / 2;
     let p = Paragraph::new(lines).alignment(Alignment::Center).block(
         Block::default()
             .title("Spell Slots")
@@ -234,6 +244,49 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
     );
 
     f.render_widget(p, chunk);
+}
+
+fn show_funds(f: &mut Frame, app: &App) {
+    const LABELS: [&str; 4] = ["PP", "GP", "SP", "CP"];
+    let chunk = get_popup_rect((35, 75), f.size());
+    clear_rect(f, chunk);
+
+    let mut lines: Vec<Line> = (0..4)
+        .map(|i| {
+            let fundage = app.player.funds.nth(i);
+            Line::from(
+                Span::from(format!(
+                    "{}: {}",
+                    LABELS[i as usize],
+                    fundage,
+                ))
+                .on_yellow()
+                .black(),
+            )
+        })
+        .collect();
+
+    let selected = match app.selected {
+        Some(Selected::Funds(idx)) => idx as u32,
+        _ => 0,
+    };
+
+    lines[(selected - app.popup_scroll) as usize].spans[0]
+        .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
+
+    let offset = lines.len() / 2;
+    let p = Paragraph::new(lines).alignment(Alignment::Center).block(
+        Block::default()
+            .title("Funds")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL)
+            .on_yellow()
+            .black()
+            .padding(Padding::new(0, 0, chunk.height / 2 - offset as u16, 0)),
+    );
+
+    f.render_widget(p, chunk);
+
 }
 
 /// Render all ui widgets using the data located in `app`.
@@ -306,6 +359,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         | Some(Selected::ClassLookup) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
         Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
+        Some(Selected::Funds(_)) => show_funds(f, app),
         _ => {}
     }
 }

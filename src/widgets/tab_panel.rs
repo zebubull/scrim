@@ -112,7 +112,7 @@ impl<'a> Widget for TabPanel<'a> {
             Span::from("   "),
             colored_span!("INVENTORY", Color::White),
             Span::from("   "),
-            colored_span!("SPELLS (o)", Color::White),
+            colored_span!("S(P)ELLS", Color::White),
         ];
 
         let idx = match self.tab {
@@ -136,7 +136,7 @@ impl<'a> Widget for TabPanel<'a> {
         // Draw the scroll percentage display
         let text = if self.scroll == 0 {
             String::from("TOP")
-        } else if self.scroll == len as u16 - height as u16 {
+        } else if self.scroll >= len as u16 - height as u16 {
             String::from("BOT")
         } else {
             format!("{}%", self.scroll * 100 / (len as u16 - height as u16))
