@@ -1,0 +1,184 @@
+{
+  "entries": {
+    "club": {
+      "name": "Club",
+      "description_short": "",
+      "description": "1 sp\n\n1d4 bludgeoning\n\n2 lb.\n\nLight"
+    },
+    "dagger": {
+      "name": "Dagger",
+      "description_short": "",
+      "description": "2 gp\n\n1d4 piercing\n\n1 lb.\n\nFinesse, light, thrown (20/60)"
+    },
+    "greatclub": {
+      "name": "Greatclub",
+      "description_short": "",
+      "description": "2 sp\n\n1d8 bludgeoning\n\n10 lb.\n\nTwo-handed"
+    },
+    "handaxe": {
+      "name": "Handaxe",
+      "description_short": "",
+      "description": "5 gp\n\n1d6 slashing\n\n2 lb.\n\nLight, thrown (20/60)"
+    },
+    "javelin": {
+      "name": "Javelin",
+      "description_short": "",
+      "description": "5 sp\n\n1d6 piercing\n\n2 lb.\n\nThrown (30/120)"
+    },
+    "light hammer": {
+      "name": "Light hammer",
+      "description_short": "",
+      "description": "2 gp\n\n1d4 bludgeoning\n\n2 lb.\n\nLight, thrown (20/60)"
+    },
+    "mace": {
+      "name": "Mace",
+      "description_short": "",
+      "description": "5 gp\n\n1d6 bludgeoning\n\n4 lb."
+    },
+    "quarterstaff": {
+      "name": "Quarterstaff",
+      "description_short": "",
+      "description": "2 sp\n\n1d6 bludgeoning\n\n4 lb.\n\nVersatile (1d8)"
+    },
+    "sickle": {
+      "name": "Sickle",
+      "description_short": "",
+      "description": "1 gp\n\n1d4 slashing\n\n2 lb.\n\nLight"
+    },
+    "spear": {
+      "name": "Spear",
+      "description_short": "",
+      "description": "1 gp\n\n1d6 piercing\n\n3 lb.\n\nThrown (20/60), versatile (1d8)"
+    },
+    "crossbow, light": {
+      "name": "Crossbow, light",
+      "description_short": "",
+      "description": "25 gp\n\n1d8 piercing\n\n5 lb.\n\nAmmunition, range (80/320), loading, two-handed"
+    },
+    "dart": {
+      "name": "Dart",
+      "description_short": "",
+      "description": "5 cp\n\n1d4 piercing\n\n1/4 lb.\n\nFinesse, thrown (20/60)"
+    },
+    "shortbow": {
+      "name": "Shortbow",
+      "description_short": "",
+      "description": "25 gp\n\n1d6 piercing\n\n2 lb.\n\nAmmunition, range (80/320), two-handed"
+    },
+    "sling": {
+      "name": "Sling",
+      "description_short": "",
+      "description": "1 sp\n\n1d4 piercing\n\nAmmunition, range (30/120)"
+    },
+    "battleaxe": {
+      "name": "Battleaxe",
+      "description_short": "",
+      "description": "10 gp\n\n1d8 slashing\n\n4 lb.\n\nVersatile (1d10)"
+    },
+    "flail": {
+      "name": "Flail",
+      "description_short": "",
+      "description": "10 gp\n\n1d8 bludgeoning\n\n2 lb."
+    },
+    "glaive": {
+      "name": "Glaive",
+      "description_short": "",
+      "description": "20 gp\n\n1d10 slashing\n\n6 lb.\n\nHeavy, reach, two-handed"
+    },
+    "greataxe": {
+      "name": "Greataxe",
+      "description_short": "",
+      "description": "30 gp\n\n1d12 slashing\n\n7 lb.\n\nHeavy, two-handed"
+    },
+    "greatsword": {
+      "name": "Greatsword",
+      "description_short": "",
+      "description": "50 gp\n\n2d6 slashing\n\n6 lb.\n\nHeavy, two-handed"
+    },
+    "halberd": {
+      "name": "Halberd",
+      "description_short": "",
+      "description": "20 gp\n\n1d10 slashing\n\n6 lb.\n\nHeavy, reach, two-handed"
+    },
+    "lance": {
+      "name": "Lance",
+      "description_short": "",
+      "description": "10 gp\n\n1d12 piercing\n\n6 lb.\n\nReach, special"
+    },
+    "longsword": {
+      "name": "Longsword",
+      "description_short": "",
+      "description": "15 gp\n\n1d8 slashing\n\n3 lb.\n\nVersatile (1d10)"
+    },
+    "maul": {
+      "name": "Maul",
+      "description_short": "",
+      "description": "10 gp\n\n2d6 bludgeoning\n\n10 lb.\n\nHeavy, two-handed"
+    },
+    "morningstar": {
+      "name": "Morningstar",
+      "description_short": "",
+      "description": "15 gp\n\n1d8 piercing\n\n4 lb."
+    },
+    "pike": {
+      "name": "Pike",
+      "description_short": "",
+      "description": "5 gp\n\n1d10 piercing\n\n18 lb.\n\nHeavy, reach, two-handed"
+    },
+    "rapier": {
+      "name": "Rapier",
+      "description_short": "",
+      "description": "25 gp\n\n1d8 piercing\n\n2 lb.\n\nFinesse"
+    },
+    "scimitar": {
+      "name": "Scimitar",
+      "description_short": "",
+      "description": "25 gp\n\n1d6 slashing\n\n3 lb.\n\nFinesse, light"
+    },
+    "shortsword": {
+      "name": "Shortsword",
+      "description_short": "",
+      "description": "10 gp\n\n1d6 piercing\n\n2 lb.\n\nFinesse, light"
+    },
+    "trident": {
+      "name": "Trident",
+      "description_short": "",
+      "description": "5 gp\n\n1d6 piercing\n\n4 lb.\n\nThrown (20/60), versatile (1d8)"
+    },
+    "war pick": {
+      "name": "War pick",
+      "description_short": "",
+      "description": "5 gp\n\n1d8 piercing\n\n2 lb."
+    },
+    "warhammer": {
+      "name": "Warhammer",
+      "description_short": "",
+      "description": "15 gp\n\n1d8 bludgeoning\n\n2 lb.\n\nVersatile (1d10)"
+    },
+    "whip": {
+      "name": "Whip",
+      "description_short": "",
+      "description": "2 gp\n\n1d4 slashing\n\n3 lb.\n\nFinesse, reach"
+    },
+    "blowgun": {
+      "name": "Blowgun",
+      "description_short": "",
+      "description": "10 gp\n\n1 piercing\n\n1 lb.\n\nAmmunition, range (25/100), loading"
+    },
+    "crossbow, hand": {
+      "name": "Crossbow, hand",
+      "description_short": "",
+      "description": "75 gp\n\n1d6 piercing\n\n3 lb.\n\nAmmunition, range (30/120), light, loading"
+    },
+    "crossbow, heavy": {
+      "name": "Crossbow, heavy",
+      "description_short": "",
+      "description": "50 gp\n\n1d10 piercing\n\n18 lb.\n\nAmmunition, range (100/400), heavy, loading, two-handed"
+    },
+    "longbow": {
+      "name": "Longbow",
+      "description_short": "",
+      "description": "50 gp\n\n1d8 piercing\n\n2 lb.\n\nAmmunition, range (150/600), heavy, two-Handed"
+    }
+  }
+}
