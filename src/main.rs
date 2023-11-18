@@ -37,7 +37,6 @@ fn main() -> Result<()> {
 
     lookup.load()?;
 
-
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
     app.update_viewport_height(terminal.size()?.height)?;

@@ -40,6 +40,8 @@ pub enum Selected {
     FreeLookup,
     /// The free lookup select menu is showing.
     FreeLookupSelect(u32),
+    /// The proficiency menu is showing
+    Proficiency(u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -316,7 +318,9 @@ impl App {
         selected = selected.saturating_add_signed(amount).min(num_entries - 1);
 
         self.selected = match self.selected {
-            Some(Selected::Completion(_, tab_item)) => Some(Selected::Completion(selected, tab_item)),
+            Some(Selected::Completion(_, tab_item)) => {
+                Some(Selected::Completion(selected, tab_item))
+            }
             Some(Selected::FreeLookupSelect(_)) => Some(Selected::FreeLookupSelect(selected)),
             _ => unreachable!(),
         };
@@ -332,7 +336,7 @@ impl App {
     }
 
     /// Calculate the correct scroll value given the current scroll, selection, and frame height.
-    fn calculate_scroll(scroll: u32, selected: u32, height: u32) -> u32 {
+    pub fn calculate_scroll(scroll: u32, selected: u32, height: u32) -> u32 {
         if selected < scroll {
             // If the current line is above the viewport, scroll up to it
             return selected;
@@ -430,11 +434,7 @@ impl App {
         if lookup.len() > 0 {
             LookupResult::Completion(lookup)
         } else {
-            LookupResult::Invalid(format!(
-                "{}:{}",
-                text.clone(),
-                lookup.len()
-            ))
+            LookupResult::Invalid(format!("{}:{}", text.clone(), lookup.len()))
         }
     }
 
@@ -466,7 +466,8 @@ impl App {
             | Some(Selected::ClassLookup)
             | Some(Selected::SpellSlots(_))
             | Some(Selected::Funds(_))
-            | Some(Selected::FreeLookupSelect(_)) => None,
+            | Some(Selected::FreeLookupSelect(_))
+            | Some(Selected::Proficiency(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(

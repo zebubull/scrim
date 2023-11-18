@@ -112,7 +112,7 @@ impl<'a> Widget for TabPanel<'a> {
             Span::from("   "),
             colored_span!("INVENTORY", Color::White),
             Span::from("   "),
-            colored_span!("S(P)ELLS", Color::White),
+            colored_span!("SP(E)LLS", Color::White),
         ];
 
         let idx = match self.tab {

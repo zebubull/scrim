@@ -327,7 +327,7 @@ impl Funds {
             1 => self.gp,
             2 => self.sp,
             3 => self.cp,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -337,10 +337,52 @@ impl Funds {
             1 => &mut self.gp,
             2 => &mut self.sp,
             3 => &mut self.cp,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, Default)]
+pub enum ProficiencyLevel {
+    #[default]
+    None,
+    Half,
+    Normal,
+    Double,
+}
+
+impl ProficiencyLevel {
+    pub fn get_mod(&self, prof_bonus: u32) -> u32 {
+        use ProficiencyLevel::*;
+        match self {
+            None => 0,
+            Half => prof_bonus / 2,
+            Normal => prof_bonus,
+            Double => prof_bonus * 2,
+        }
+    }
+}
+
+pub static SKILL_NAMES: [&str; 18] = [
+    "Athletics",
+    "Acrobatics",
+    "Sleight of Hand",
+    "Stealth",
+    "Arcana",
+    "History",
+    "Investigation",
+    "Nature",
+    "Religion",
+    "Animal Handling",
+    "Insight",
+    "Medicine",
+    "Perception",
+    "Survival",
+    "Deception",
+    "Intimidation",
+    "Performance",
+    "Persuasion",
+];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -402,6 +444,8 @@ pub struct Player {
     pub spell_slots_remaining: SpellSlots,
     /// The player's current funds,
     pub funds: Funds,
+    /// The players skill modifiers
+    pub skills: [ProficiencyLevel; 18],
 }
 
 /// Get the avg roll value for a given dice.
@@ -457,6 +501,31 @@ impl Player {
 
         self.hp = self.hp.saturating_add_signed(self.max_hp as i32 - old_max);
     }
+
+    /// Get the stat modifier corresponding to the given skill
+    fn get_stat_modifier(&self, skill: u32) -> i32 {
+        let val = match skill {
+            0 => self.stats.strength,
+            1 | 2 | 3 => self.stats.dexterity,
+            4 | 5 | 6 | 7 | 8 => self.stats.intelligence,
+            9 | 10 | 11 | 12 | 13 => self.stats.wisdom,
+            14 | 15 | 16 | 17 => self.stats.charisma,
+            _ => unreachable!(),
+        };
+
+        ((val as f32 - 10.0) / 2.0).floor() as i32
+            + self.skills[skill as usize].get_mod(self.prof_bonus) as i32
+    }
+
+    /// Get all of the player's skill modifier values
+    pub fn get_skills(&self) -> [i32; 18] {
+        let mut skills = [0; 18];
+        for (i, skill) in skills.iter_mut().enumerate() {
+            *skill = self.get_stat_modifier(i as u32);
+        }
+
+        skills
+    }
 }
 
 impl Default for Player {
@@ -482,6 +551,7 @@ impl Default for Player {
             spell_slots: SpellSlots::from(1, &Class::Fighter),
             spell_slots_remaining: SpellSlots::from(1, &Class::Fighter),
             funds: Funds::default(),
+            skills: [ProficiencyLevel::default(); 18],
         }
     }
 }
