@@ -37,10 +37,12 @@ fn main() -> Result<()> {
 
     lookup.load()?;
 
+
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
     app.update_viewport_height(terminal.size()?.height)?;
-    let events = EventHandler::new();
+    const AUTOSAVE_MINS: u64 = 5;
+    let events = EventHandler::new(AUTOSAVE_MINS * 60 * 1000);
     let mut tui = Tui::new(terminal, events);
 
     // Load player data
@@ -57,8 +59,7 @@ fn main() -> Result<()> {
         tui.draw(&mut app)?;
         // Handle events
         match tui.events.next().unwrap() {
-            // Tick event is currently unused
-            Event::Tick => {}
+            Event::Tick => app.save_player()?,
             Event::Key(key_event) => update(&mut app, &lookup, key_event)?,
             Event::Mouse(_) => {}
             Event::Resize(_, y) => app.update_viewport_height(y)?,

@@ -161,9 +161,10 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .collect();
 
             let selected = match app.selected {
-                Some(Selected::Completion(idx, _)) => idx as u32,
+                Some(Selected::Completion(idx, _)) => idx,
+                Some(Selected::FreeLookupSelect(idx)) => idx,
                 _ => 0,
-            };
+            } as u32;
 
             lines[(selected - app.popup_scroll) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
@@ -289,6 +290,39 @@ fn show_funds(f: &mut Frame, app: &App) {
 
 }
 
+fn show_free_lookup(f: &mut Frame, app: &App) {
+    let vchunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec! [
+            Constraint::Length(8),
+            Constraint::Length(3),
+            Constraint::Min(1)
+        ]).split(f.size());
+
+    let hchunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(vec! [
+            Constraint::Length(10),
+            Constraint::Min(1),
+            Constraint::Length(1)
+        ]).split(vchunks[1]);
+
+    clear_rect(f, hchunks[1]);
+
+    let p = Paragraph::new(app.lookup_buffer.clone())
+        .alignment(Alignment::Left)
+        .block(
+            Block::default()
+            .title("Lookup")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL)
+            .on_yellow()
+            .black()
+    );
+
+    f.render_widget(p, hchunks[1]);
+}
+
 /// Render all ui widgets using the data located in `app`.
 pub fn render(app: &mut App, f: &mut Frame) {
     // Create layouts
@@ -356,10 +390,12 @@ pub fn render(app: &mut App, f: &mut Frame) {
     match app.selected {
         Some(Selected::Completion(_, _))
         | Some(Selected::ItemLookup(_))
-        | Some(Selected::ClassLookup) => show_lookup(f, app),
+        | Some(Selected::ClassLookup)
+        | Some(Selected::FreeLookupSelect(_)) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
         Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
         Some(Selected::Funds(_)) => show_funds(f, app),
+        Some(Selected::FreeLookup) => show_free_lookup(f, app),
         _ => {}
     }
 }

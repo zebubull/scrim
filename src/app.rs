@@ -27,15 +27,19 @@ pub enum Selected {
     ItemLookup(u32),
     /// The lookup menu is showing the player's current class or the player's race.
     ClassLookup,
-    /// The completion menu is showing
+    /// The completion menu is showing.
     ///
     /// This holds a reference to the currently selected item and the tab item that
     /// the completion frame originated from
     Completion(u32, u32),
-    /// The spell slots popup is showing
+    /// The spell slots popup is showing.
     SpellSlots(u32),
-    /// The money popup is showing
+    /// The money popup is showing.
     Funds(u32),
+    /// The free lookup menu is showing.
+    FreeLookup,
+    /// The free lookup select menu is showing.
+    FreeLookupSelect(u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -91,6 +95,8 @@ pub struct App {
     pub popup_height: u32,
     /// The most recent lookup result, if it exists.
     pub current_lookup: Option<LookupResult>,
+    /// The current free lookup buffer
+    pub lookup_buffer: String,
 }
 
 impl App {
@@ -291,8 +297,9 @@ impl App {
 
     /// Move the current popup scroll and selected item by the given amount.
     pub fn update_popup_scroll(&mut self, amount: i32) -> Result<()> {
-        let (mut selected, tab_item) = match self.selected {
-            Some(Selected::Completion(item, tab_item)) => (item, tab_item),
+        let mut selected = match self.selected {
+            Some(Selected::Completion(item, _)) => item,
+            Some(Selected::FreeLookupSelect(item)) => item,
             _ => return Err(eyre!("current selection does not allow popup scroll")),
         };
 
@@ -308,7 +315,11 @@ impl App {
 
         selected = selected.saturating_add_signed(amount).min(num_entries - 1);
 
-        self.selected = Some(Selected::Completion(selected, tab_item));
+        self.selected = match self.selected {
+            Some(Selected::Completion(_, tab_item)) => Some(Selected::Completion(selected, tab_item)),
+            Some(Selected::FreeLookupSelect(_)) => Some(Selected::FreeLookupSelect(selected)),
+            _ => unreachable!(),
+        };
 
         self.popup_scroll = App::calculate_scroll(self.popup_scroll, selected, self.popup_height);
 
@@ -404,23 +415,27 @@ impl App {
             Spells => &self.player.spells,
         };
 
-        let text = tab[item as usize].trim().to_ascii_lowercase();
-        let lookup = lookup.get_completions(&text);
-
-        // Probably shouldn't clone but the lifetimes were too confusing :(
-        self.current_lookup = if lookup.len() > 0 {
-            Some(LookupResult::Completion(lookup))
-        } else {
-            Some(LookupResult::Invalid(format!(
-                "{}:{}",
-                text.clone(),
-                lookup.len()
-            )))
-        };
+        self.current_lookup = Some(self.get_completion(&tab[item as usize], lookup));
 
         self.selected = Some(Selected::ItemLookup(item));
         self.popup_scroll = 0;
         Ok(())
+    }
+
+    pub fn get_completion(&self, text: &str, lookup: &Lookup) -> LookupResult {
+        let text = text.trim().to_ascii_lowercase();
+        let lookup = lookup.get_completions(&text);
+
+        // Probably shouldn't clone but the lifetimes were too confusing :(
+        if lookup.len() > 0 {
+            LookupResult::Completion(lookup)
+        } else {
+            LookupResult::Invalid(format!(
+                "{}:{}",
+                text.clone(),
+                lookup.len()
+            ))
+        }
     }
 
     pub fn finish_completion(&mut self) {
@@ -450,7 +465,8 @@ impl App {
             | Some(Selected::Completion(_, _))
             | Some(Selected::ClassLookup)
             | Some(Selected::SpellSlots(_))
-            | Some(Selected::Funds(_)) => None,
+            | Some(Selected::Funds(_))
+            | Some(Selected::FreeLookupSelect(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(
@@ -509,6 +525,7 @@ impl App {
                 Tab::Inventory => &mut self.player.inventory[idx as usize],
                 Tab::Spells => &mut self.player.spells[idx as usize],
             })),
+            Some(Selected::FreeLookup) => Some(ControlType::TextInput(&mut self.lookup_buffer)),
         }
     }
 }

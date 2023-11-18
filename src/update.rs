@@ -1,5 +1,5 @@
 use crate::{
-    app::{App, ControlType, Selected, Tab},
+    app::{App, ControlType, Selected, Tab, LookupResult},
     lookup::Lookup,
     player::Class,
 };
@@ -292,6 +292,44 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             }
+            Some(Selected::FreeLookup) => match key_event.code {
+                KeyCode::Backspace => {
+                    app.lookup_buffer.pop();
+                }
+                KeyCode::Char(c) => {
+                    app.lookup_buffer.push(c);
+                },
+                KeyCode::Enter => {
+                    app.current_lookup = Some(app.get_completion(&app.lookup_buffer, lookup));
+                    app.popup_scroll = 0;
+                    app.selected = Some(Selected::FreeLookupSelect(0));
+                },
+                _ => {}
+            }
+            Some(Selected::FreeLookupSelect(idx)) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_scroll(1)?,
+                KeyCode::Char('k') => app.update_popup_scroll(-1)?,
+                KeyCode::Char('J') => app.update_popup_scroll(10)?,
+                KeyCode::Char('K') => app.update_popup_scroll(-10)?,
+                KeyCode::Char('q') => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
+                KeyCode::Enter => {
+                    app.selected = Some(Selected::ClassLookup);
+                    let options = match app.current_lookup {
+                        Some(LookupResult::Completion(ref vec)) => vec,
+                        _ => unreachable!(),
+                    };
+                    if options.len() > 0 {
+                        app.current_lookup = Some(LookupResult::Success(options[idx as usize].clone()))
+                    } else {
+                        app.selected = None;
+                        app.current_lookup = None;
+                    }
+                }
+                _ => {}
+            }
             None => match key_event.code {
                 KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
@@ -301,6 +339,10 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 KeyCode::Char('F') => app.selected = Some(Selected::Funds(0)),
                 KeyCode::Char('C') => app.lookup_class(&lookup),
                 KeyCode::Char('R') => app.lookup_race(&lookup),
+                KeyCode::Char('L') =>  {
+                    app.selected = Some(Selected::FreeLookup);
+                    app.lookup_buffer.clear();
+                }
                 KeyCode::Char('k') => app.update_overview_scroll(-1),
                 KeyCode::Char('j') => app.update_overview_scroll(1),
                 KeyCode::Char('K') => app.update_overview_scroll(-10),
