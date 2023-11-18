@@ -1,7 +1,7 @@
 use crate::{
-    app::{App, ControlType, Selected, Tab},
+    app::{App, ControlType, LookupResult, Selected, Tab},
     lookup::Lookup,
-    player::Class,
+    player::{Class, ProficiencyLevel},
 };
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -291,16 +291,91 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.selected = Some(Selected::Funds(idx.saturating_sub(1)));
                 }
                 _ => {}
-            }
+            },
+            Some(Selected::FreeLookup) => match key_event.code {
+                KeyCode::Backspace => {
+                    app.lookup_buffer.pop();
+                }
+                KeyCode::Char(c) => {
+                    app.lookup_buffer.push(c);
+                }
+                KeyCode::Tab | KeyCode::Enter => {
+                    app.current_lookup = Some(app.get_completion(&app.lookup_buffer, lookup));
+                    app.popup_scroll = 0;
+                    app.selected = Some(Selected::FreeLookupSelect(0));
+                }
+                _ => {}
+            },
+            Some(Selected::FreeLookupSelect(idx)) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_scroll(1)?,
+                KeyCode::Char('k') => app.update_popup_scroll(-1)?,
+                KeyCode::Char('J') => app.update_popup_scroll(10)?,
+                KeyCode::Char('K') => app.update_popup_scroll(-10)?,
+                KeyCode::Char('q') => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
+                KeyCode::Enter => {
+                    app.selected = Some(Selected::ClassLookup);
+                    let options = match app.current_lookup {
+                        Some(LookupResult::Completion(ref vec)) => vec,
+                        _ => unreachable!(),
+                    };
+                    if options.len() > 0 {
+                        app.current_lookup =
+                            Some(LookupResult::Success(options[idx as usize].clone()))
+                    } else {
+                        app.selected = None;
+                        app.current_lookup = None;
+                    }
+                }
+                _ => {}
+            },
+            Some(Selected::Proficiency(idx)) => match key_event.code {
+                KeyCode::Char('j') => {
+                    let new_idx = std::cmp::min(17, idx + 1);
+                    app.selected = Some(Selected::Proficiency(new_idx));
+                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                }
+                KeyCode::Char('k') => {
+                    let new_idx = idx.saturating_sub(1);
+                    app.selected = Some(Selected::Proficiency(new_idx));
+                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                }
+                KeyCode::Char('J') => {
+                    let new_idx = std::cmp::min(17, idx + 10);
+                    app.selected = Some(Selected::Proficiency(new_idx));
+                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                }
+                KeyCode::Char('K') => {
+                    let new_idx = idx.saturating_sub(10);
+                    app.selected = Some(Selected::Proficiency(new_idx));
+                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                }
+                KeyCode::Char('p') => app.player.skills[idx as usize] = ProficiencyLevel::Normal,
+                KeyCode::Char('n') => app.player.skills[idx as usize] = ProficiencyLevel::None,
+                KeyCode::Char('e') => app.player.skills[idx as usize] = ProficiencyLevel::Double,
+                KeyCode::Char('h') => app.player.skills[idx as usize] = ProficiencyLevel::Half,
+                KeyCode::Char('q') | KeyCode::Enter => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
+                _ => {}
+            },
             None => match key_event.code {
                 KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
                 KeyCode::Char('i') => app.selected = Some(Selected::InfoItem(0)),
                 KeyCode::Char('t') => app.selected = Some(Selected::TabItem(app.vscroll)),
-                KeyCode::Char('P') => app.selected = Some(Selected::SpellSlots(0)),
+                KeyCode::Char('E') => app.selected = Some(Selected::SpellSlots(0)),
                 KeyCode::Char('F') => app.selected = Some(Selected::Funds(0)),
+                KeyCode::Char('P') => app.selected = Some(Selected::Proficiency(0)),
                 KeyCode::Char('C') => app.lookup_class(&lookup),
                 KeyCode::Char('R') => app.lookup_race(&lookup),
+                KeyCode::Char('L') => {
+                    app.selected = Some(Selected::FreeLookup);
+                    app.lookup_buffer.clear();
+                }
                 KeyCode::Char('k') => app.update_overview_scroll(-1),
                 KeyCode::Char('j') => app.update_overview_scroll(1),
                 KeyCode::Char('K') => app.update_overview_scroll(-10),

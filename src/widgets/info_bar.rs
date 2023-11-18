@@ -70,6 +70,8 @@ impl<'a> Widget for InfoBar<'a> {
             ),
             separator!(Color::Yellow),
             colored_span!("(F)unds", Color::Yellow),
+            separator!(Color::Yellow),
+            colored_span!("(P)roficiencies", Color::Yellow),
         ]);
 
         if let Some(item) = self.highlight {
