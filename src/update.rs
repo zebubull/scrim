@@ -43,10 +43,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 // Stats and may have changed so we need to do this. It might
                 // be better to change stat and level to CycleFn but i'm too lazy
                 // to check if that's faster and the calculations are relatively light
-                if let Some(Selected::InfoItem(_)) = app.selected {} else {
-                    app.player.update_stat_dependants();
-                    app.player.update_level_dependants();
-                }
+                app.player.update_stat_dependants();
+                app.player.update_level_dependants();
             }
             Some(ControlType::CycleFn(prev, next)) => {
                 match key_event.code {

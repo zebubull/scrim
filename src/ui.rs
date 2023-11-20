@@ -305,7 +305,6 @@ fn show_free_lookup(f: &mut Frame, app: &mut App) {
         ])
         .split(vchunks[1]);
 
-    app.popup_height = hchunks[1].height as u32 - 4;
     clear_rect(f, hchunks[1]);
 
     let p = Paragraph::new(app.lookup_buffer.clone())

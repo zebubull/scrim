@@ -491,6 +491,54 @@ impl Player {
         self.update_hp();
     }
 
+    fn stat_by_race(stat: u32, race: Race) -> u32 {
+        use Race::*;
+        match stat {
+            0 => match race {
+                MountainDwarf | Dragonborn | HalfOrc => 2,
+                Human => 1,
+                _ => 0,
+            }
+            1 => match race {
+                HighElf | WoodElf | DarkElf | LightfootHalfling | StoutHalfling => 2,
+                Human | ForestGnome => 1,
+                _ => 0,
+            }
+            2 => match race {
+                MountainDwarf | HillDwarf => 2,
+                StoutHalfling | Human | RockGnome => 1,
+                _ => 0,
+            }
+            3 => match race {
+                ForestGnome | RockGnome => 2,
+                HighElf | Human | Tiefling => 1,
+                _ => 0,
+            }
+            4 => match race {
+                HillDwarf | WoodElf | Human => 1,
+                _ => 0,
+            }
+            5 => match race {
+                HalfElf | Tiefling => 2,
+                DarkElf | LightfootHalfling | Human | Dragonborn => 1,
+                _ => 0,
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn update_race(&mut self, race: Race) {
+        let old_race = self.race;
+        self.race = race;
+
+        (0..6).for_each(|i| {
+            *self.stats.nth(i) -= Player::stat_by_race(i, old_race);
+            *self.stats.nth(i) += Player::stat_by_race(i, race);
+        });
+        
+        self.update_hp();
+    }
+
     /// Recalculates the player's max health and adjusts current
     /// health accordingly.
     fn update_hp(&mut self) {

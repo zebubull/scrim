@@ -473,8 +473,8 @@ impl App {
                 1 => Some(ControlType::CycleFn(
                     // Currently, there are no calculations made with the race so just
                     // raw setting it is fine.
-                    |app| app.player.race = app.player.race.prev(),
-                    |app| app.player.race = app.player.race.next(),
+                    |app| app.player.update_race(app.player.race.prev()),
+                    |app| app.player.update_race(app.player.race.next()),
                 )),
                 2 => Some(ControlType::Cycle(&mut self.player.level, 1, 20)),
                 3 => Some(ControlType::CycleFn(
