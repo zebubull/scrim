@@ -87,7 +87,7 @@ impl<'a> Widget for TabPanel<'a> {
 
         if let Some(item) = self.highlight {
             if len > 0 {
-                lines[(item - self.scroll) as usize].spans[0].patch_style(
+                lines[item.saturating_sub(self.scroll) as usize].spans[0].patch_style(
                     Style::default().fg(Color::Black).bg(if self.editing {
                         Color::LightGreen
                     } else {

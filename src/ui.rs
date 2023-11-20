@@ -167,7 +167,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 _ => 0,
             } as u32;
 
-            lines[(selected - app.popup_scroll) as usize].spans[0]
+            lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
             let options = Paragraph::new(lines)
@@ -231,7 +231,7 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
         _ => 0,
     };
 
-    lines[(selected - app.popup_scroll) as usize].spans[0]
+    lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
         .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
     let offset = lines.len() / 2;
@@ -269,7 +269,7 @@ fn show_funds(f: &mut Frame, app: &App) {
         _ => 0,
     };
 
-    lines[(selected - app.popup_scroll) as usize].spans[0]
+    lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
         .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
     let offset = lines.len() / 2;
@@ -349,7 +349,7 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
         _ => unreachable!(),
     };
 
-    lines[(selected - app.popup_scroll) as usize].patch_style(Style::new().on_black().yellow());
+    lines[selected.saturating_sub(app.popup_scroll) as usize].patch_style(Style::new().on_black().yellow());
 
     let p = Paragraph::new(lines).alignment(Alignment::Left).block(
         Block::default()
