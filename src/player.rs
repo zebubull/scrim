@@ -52,7 +52,7 @@ pub enum Alignment {
 crate::impl_cycle!(Alignment);
 
 #[derive(
-    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount,
+    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount, PartialEq,
 )]
 pub enum Race {
     Dragonborn,
@@ -497,7 +497,8 @@ impl Player {
         let old_max = self.max_hp as i32;
         self.max_hp = self.hit_dice as u32
             + (avg_roll(self.hit_dice) as u32 * (self.level as u32 - 1))
-            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u32 * self.level as u32;
+            + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u32 * self.level as u32
+            + if self.race == Race::HillDwarf { self.level } else { 0 };
 
         self.hp = self.hp.saturating_add_signed(self.max_hp as i32 - old_max);
     }
