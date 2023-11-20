@@ -17,7 +17,7 @@ pub enum Selected {
     StatItem(u32),
     /// An item in the player info bar.
     InfoItem(u32),
-    /// A line in the tab panel.
+    /// A line in the tab panel.``
     TabItem(u32),
     /// The quit menu is showing.
     Quitting,
@@ -42,6 +42,8 @@ pub enum Selected {
     FreeLookupSelect(u32),
     /// The proficiency menu is showing
     Proficiency(u32),
+    /// The load menu is showing
+    Load(u32),
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -69,6 +71,7 @@ pub enum Tab {
 pub enum LookupResult {
     Success(Rc<LookupEntry>),
     Completion(Vec<Rc<LookupEntry>>),
+    Files(Vec<String>),
     Invalid(String),
 }
 
@@ -126,6 +129,7 @@ impl App {
                 path.to_string_lossy()
             )
         })?;
+        self.path = Some(path.to_string_lossy().to_string());
         Ok(())
     }
 
@@ -302,11 +306,13 @@ impl App {
         let mut selected = match self.selected {
             Some(Selected::Completion(item, _)) => item,
             Some(Selected::FreeLookupSelect(item)) => item,
+            Some(Selected::Load(item)) => item,
             _ => return Err(eyre!("current selection does not allow popup scroll")),
         };
 
         let num_entries = match &self.current_lookup {
             Some(LookupResult::Completion(v)) => v.len(),
+            Some(LookupResult::Files(v)) => v.len(),
             Some(LookupResult::Invalid(_)) => return Ok(()),
             _ => {
                 return Err(eyre!(
@@ -322,6 +328,7 @@ impl App {
                 Some(Selected::Completion(selected, tab_item))
             }
             Some(Selected::FreeLookupSelect(_)) => Some(Selected::FreeLookupSelect(selected)),
+            Some(Selected::Load(_)) => Some(Selected::Load(selected)),
             _ => unreachable!(),
         };
 
@@ -406,6 +413,19 @@ impl App {
         self.popup_scroll = 0;
     }
 
+    pub fn lookup_files(&mut self) -> Result<()> {
+        let dir = std::env::current_dir()?;
+        let files = std::fs::read_dir(dir)?;
+
+        let names: Vec<String> = files.map(|f| f.unwrap().file_name().to_str().unwrap().to_owned()).filter(|f| f != ".").collect();
+
+        self.selected = Some(Selected::Load(0));
+        self.current_lookup = Some(LookupResult::Files(names));
+
+        Ok(())
+    }
+    
+    /// Get all completions for the currently selected tab item
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
         use Tab::*;
         let item = match self.selected {
@@ -467,7 +487,8 @@ impl App {
             | Some(Selected::SpellSlots(_))
             | Some(Selected::Funds(_))
             | Some(Selected::FreeLookupSelect(_))
-            | Some(Selected::Proficiency(_)) => None,
+            | Some(Selected::Proficiency(_))
+            | Some(Selected::Load(_)) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(

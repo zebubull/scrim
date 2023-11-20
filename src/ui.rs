@@ -177,6 +177,33 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .wrap(Wrap { trim: false });
             f.render_widget(options, vchunks[2]);
         }
+        LookupResult::Files(entries) => {
+            let mut lines: Vec<Line> = entries
+                .iter()
+                .skip(app.popup_scroll as usize)
+                .take(app.popup_height as usize)
+                .map(|e| Line::from(Span::from(e).on_yellow()))
+                .collect();
+
+            let layout = Layout::default()
+                .constraints(vec![Constraint::Min(1)])
+                .margin(1).split(chunk);
+
+            let selected = match app.selected {
+                Some(Selected::Load(idx)) => idx,
+                _ => 0,
+            } as u32;
+
+            lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
+                .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
+
+            let options = Paragraph::new(lines)
+                .black()
+                .alignment(Alignment::Center)
+                .scroll((app.popup_scroll as u16, 0))
+                .wrap(Wrap { trim: false });
+            f.render_widget(options, layout[0]);
+        }
     }
 }
 
@@ -430,7 +457,8 @@ pub fn render(app: &mut App, f: &mut Frame) {
         Some(Selected::Completion(_, _))
         | Some(Selected::ItemLookup(_))
         | Some(Selected::ClassLookup)
-        | Some(Selected::FreeLookupSelect(_)) => show_lookup(f, app),
+        | Some(Selected::FreeLookupSelect(_))
+        | Some(Selected::Load(_)) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
         Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
         Some(Selected::Funds(_)) => show_funds(f, app),

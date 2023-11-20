@@ -362,6 +362,29 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
+            Some(Selected::Load(idx)) => match key_event.code {
+                KeyCode::Char('j') => app.update_popup_scroll(1)?,
+                KeyCode::Char('k') => app.update_popup_scroll(-1)?,
+                KeyCode::Char('J') => app.update_popup_scroll(10)?,
+                KeyCode::Char('K') => app.update_popup_scroll(-10)?,
+                KeyCode::Char('q') => {
+                    app.selected = None;
+                    app.current_lookup = None;
+                }
+                KeyCode::Enter => {
+                    app.selected = None;
+                    app.popup_scroll = 0;
+                    app.vscroll = 0;
+                    app.update_tab(Tab::Notes)?;
+                    let p = match &app.current_lookup {
+                        Some(LookupResult::Files(ref f)) => &f[idx as usize],
+                        _ => unreachable!(),
+                    };
+                    app.load_player(&std::path::PathBuf::from(p))?;
+                    app.current_lookup = None;
+                }
+                _ => {}
+            },
             None => match key_event.code {
                 KeyCode::Char('u') => app.selected = Some(Selected::TopBarItem(0)),
                 KeyCode::Char('s') => app.selected = Some(Selected::StatItem(0)),
@@ -376,6 +399,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.selected = Some(Selected::FreeLookup);
                     app.lookup_buffer.clear();
                 }
+                KeyCode::Char('[') => app.lookup_files()?,
                 KeyCode::Char('k') => app.update_overview_scroll(-1),
                 KeyCode::Char('j') => app.update_overview_scroll(1),
                 KeyCode::Char('K') => app.update_overview_scroll(-10),

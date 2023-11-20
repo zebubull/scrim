@@ -18,8 +18,6 @@ fn main() -> Result<()> {
     let args: Vec<_> = args().collect();
     let path = if args.len() > 1 { Some(&args[1]) } else { None };
 
-    app.path = path.cloned();
-
     let mut lookup_path = PathBuf::new();
     #[cfg(debug_assertions)]
     {
