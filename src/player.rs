@@ -52,7 +52,16 @@ pub enum Alignment {
 crate::impl_cycle!(Alignment);
 
 #[derive(
-    Debug, Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount, PartialEq,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    FromPrimitive,
+    Serialize,
+    Deserialize,
+    Display,
+    EnumCount,
+    PartialEq,
 )]
 pub enum Race {
     Dragonborn,
@@ -498,31 +507,31 @@ impl Player {
                 MountainDwarf | Dragonborn | HalfOrc => 2,
                 Human => 1,
                 _ => 0,
-            }
+            },
             1 => match race {
                 HighElf | WoodElf | DarkElf | LightfootHalfling | StoutHalfling => 2,
                 Human | ForestGnome => 1,
                 _ => 0,
-            }
+            },
             2 => match race {
                 MountainDwarf | HillDwarf => 2,
                 StoutHalfling | Human | RockGnome => 1,
                 _ => 0,
-            }
+            },
             3 => match race {
                 ForestGnome | RockGnome => 2,
                 HighElf | Human | Tiefling => 1,
                 _ => 0,
-            }
+            },
             4 => match race {
                 HillDwarf | WoodElf | Human => 1,
                 _ => 0,
-            }
+            },
             5 => match race {
                 HalfElf | Tiefling => 2,
                 DarkElf | LightfootHalfling | Human | Dragonborn => 1,
                 _ => 0,
-            }
+            },
             _ => unreachable!(),
         }
     }
@@ -535,7 +544,7 @@ impl Player {
             *self.stats.nth(i) -= Player::stat_by_race(i, old_race);
             *self.stats.nth(i) += Player::stat_by_race(i, race);
         });
-        
+
         self.update_hp();
     }
 
@@ -546,7 +555,11 @@ impl Player {
         self.max_hp = self.hit_dice as u32
             + (avg_roll(self.hit_dice) as u32 * (self.level as u32 - 1))
             + ((self.stats.constitution as f32 - 10.0) / 2.0).floor() as u32 * self.level as u32
-            + if self.race == Race::HillDwarf { self.level } else { 0 };
+            + if self.race == Race::HillDwarf {
+                self.level
+            } else {
+                0
+            };
 
         self.hp = self.hp.saturating_add_signed(self.max_hp as i32 - old_max);
     }

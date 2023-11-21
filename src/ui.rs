@@ -78,7 +78,11 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
     app.popup_height = chunk.height as u32 - 4;
 
     let block = Block::default()
-        .title("Reference Lookup")
+        .title(if let Some(LookupResult::Files(_)) = app.current_lookup {
+            "File Select"
+        } else {
+            "Reference Lookup"
+        })
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .on_yellow()
@@ -187,7 +191,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
             let layout = Layout::default()
                 .constraints(vec![Constraint::Min(1)])
-                .margin(1).split(chunk);
+                .margin(1)
+                .split(chunk);
 
             let selected = match app.selected {
                 Some(Selected::Load(idx)) => idx,
@@ -375,7 +380,8 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
         _ => unreachable!(),
     };
 
-    lines[selected.saturating_sub(app.popup_scroll) as usize].patch_style(Style::new().on_black().yellow());
+    lines[selected.saturating_sub(app.popup_scroll) as usize]
+        .patch_style(Style::new().on_black().yellow());
 
     let p = Paragraph::new(lines).alignment(Alignment::Left).block(
         Block::default()

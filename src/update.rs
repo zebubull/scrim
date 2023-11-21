@@ -335,22 +335,26 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 KeyCode::Char('j') => {
                     let new_idx = std::cmp::min(17, idx + 1);
                     app.selected = Some(Selected::Proficiency(new_idx));
-                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                    app.popup_scroll =
+                        App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
                 }
                 KeyCode::Char('k') => {
                     let new_idx = idx.saturating_sub(1);
                     app.selected = Some(Selected::Proficiency(new_idx));
-                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                    app.popup_scroll =
+                        App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
                 }
                 KeyCode::Char('J') => {
                     let new_idx = std::cmp::min(17, idx + 10);
                     app.selected = Some(Selected::Proficiency(new_idx));
-                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                    app.popup_scroll =
+                        App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
                 }
                 KeyCode::Char('K') => {
                     let new_idx = idx.saturating_sub(10);
                     app.selected = Some(Selected::Proficiency(new_idx));
-                    app.popup_scroll = App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
+                    app.popup_scroll =
+                        App::calculate_scroll(app.popup_scroll, new_idx, app.popup_height);
                 }
                 KeyCode::Char('p') => app.player.skills[idx as usize] = ProficiencyLevel::Normal,
                 KeyCode::Char('n') => app.player.skills[idx as usize] = ProficiencyLevel::None,

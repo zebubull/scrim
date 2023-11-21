@@ -417,14 +417,17 @@ impl App {
         let dir = std::env::current_dir()?;
         let files = std::fs::read_dir(dir)?;
 
-        let names: Vec<String> = files.map(|f| f.unwrap().file_name().to_str().unwrap().to_owned()).filter(|f| f != ".").collect();
+        let names: Vec<String> = files
+            .map(|f| f.unwrap().file_name().to_str().unwrap().to_owned())
+            .filter(|f| f != ".")
+            .collect();
 
         self.selected = Some(Selected::Load(0));
         self.current_lookup = Some(LookupResult::Files(names));
 
         Ok(())
     }
-    
+
     /// Get all completions for the currently selected tab item
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
         use Tab::*;
