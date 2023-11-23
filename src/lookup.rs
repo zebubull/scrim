@@ -28,9 +28,11 @@ impl Lookup {
     /// lookup tables that need to be loaded later.
     ///
     /// # Example
-    /// ```
-    /// let mut lookup = Lookup::new("data/lookups");
-    /// lookup::load()?;
+    /// ```no_run
+    /// use scrim::lookup::Lookup;
+    /// 
+    /// let mut lookup = Lookup::new("data/lookups".into());
+    /// lookup.load().expect("failed to load lookup");
     /// lookup.get_entry("apple");
     /// ```
     pub fn new(load_path: PathBuf) -> Self {

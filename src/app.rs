@@ -573,3 +573,15 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::App;
+    #[test]
+    pub fn app_scroll_test() {
+        assert_eq!(App::calculate_scroll(0, 0, 40), 0);
+        assert_eq!(App::calculate_scroll(0, 40, 40), 1);
+        assert_eq!(App::calculate_scroll(1, 1, 40), 1);
+        assert_eq!(App::calculate_scroll(1, 0, 40), 0);
+    }
+}

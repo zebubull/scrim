@@ -75,7 +75,6 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((55, 65), f.size());
     clear_rect(f, chunk);
 
-    app.popup_height = u32::from(chunk.height) - 4;
 
     let block = Block::default()
         .title(if let Some(LookupResult::Files(_)) = app.current_lookup {
@@ -93,6 +92,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
     match lookup {
         LookupResult::Invalid(search) => {
+            app.popup_height = u32::from(chunk.height) - 2;
             let p = Paragraph::new(format!("No entry found for '{search}'"))
                 .black()
                 .wrap(Wrap { trim: false });
@@ -124,17 +124,22 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                     ]
                 })
                 .split(chunk);
+
+            app.popup_height = if render_short { u32::from(chunk.height) - 6 } else { u32::from(chunk.height) - 4 };
+
             let title = Paragraph::new(entry.name.to_string())
                 .black()
                 .bold()
                 .alignment(Alignment::Center);
             f.render_widget(title, vchunks[0]);
+
             if render_short {
                 let short = Paragraph::new(entry.description_short.to_string())
                     .black()
                     .alignment(Alignment::Left);
                 f.render_widget(short, vchunks[1]);
             }
+
             let desc = Paragraph::new(entry.description.to_string())
                 .black()
                 .alignment(Alignment::Left)
@@ -152,7 +157,9 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                     Constraint::Min(1),
                 ])
                 .split(chunk);
-            let title = Paragraph::new(format!("{} results found", entries.len()))
+
+            app.popup_height = vchunks[2].height as u32;
+            let title = Paragraph::new(format!("{} results founds...", entries.len()))
                 .black()
                 .bold()
                 .alignment(Alignment::Center);
@@ -177,11 +184,11 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             let options = Paragraph::new(lines)
                 .black()
                 .alignment(Alignment::Center)
-                .scroll((app.popup_scroll as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(options, vchunks[2]);
         }
         LookupResult::Files(entries) => {
+            app.popup_height = u32::from(chunk.height) - 4;
             let mut lines: Vec<Line> = entries
                 .iter()
                 .skip(app.popup_scroll as usize)

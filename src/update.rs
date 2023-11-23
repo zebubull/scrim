@@ -23,7 +23,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     KeyCode::Char(c) => {
                         text.push(c);
                     }
-                    KeyCode::Tab => {
+                    KeyCode::Tab if !app.current_tab().is_empty() => {
                         if let Some(Selected::TabItem(item)) = app.selected {
                             app.complete_current_selection(lookup)?;
                             app.selected = Some(Selected::Completion(0, item));
@@ -160,7 +160,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 KeyCode::Char('l') if !app.current_tab().is_empty() => {
                     app.lookup_current_selection(lookup)
                 }
-                KeyCode::Tab => {
+                KeyCode::Tab if !app.current_tab().is_empty() => {
                     app.complete_current_selection(lookup)?;
                     app.selected = Some(Selected::Completion(0, item));
                     app.editing = false;
