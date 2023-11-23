@@ -51,27 +51,26 @@ impl Lookup {
         })?;
 
         files
+            // filter for only JSON files
             .filter_map(|f| match f {
                 Ok(file) => {
-                    if (match file.file_type() {
-                        Ok(t) => t.is_file(),
-                        Err(_) => return None,
-                    }) && (file.file_name().to_str().unwrap().ends_with(".json"))
-                    {
-                        Some(file)
+                    let path = file.path();
+                    if path.is_file() && path.extension().unwrap_or_default() == "json" {
+                        Some(path)
                     } else {
                         None
                     }
                 }
                 Err(_) => None,
             })
-            .for_each(|file| {
+            // try to parse each file
+            .for_each(|path| {
                 let lookup: Lookup = serde_json::from_slice(
-                    std::fs::read(file.path())
+                    std::fs::read(&path)
                         .wrap_err_with(|| {
                             format!(
                                 "failed to read lookup file '{}'",
-                                file.path().to_string_lossy()
+                                path.to_str().unwrap_or(&path.to_string_lossy())
                             )
                         })
                         .unwrap()
@@ -80,7 +79,7 @@ impl Lookup {
                 .wrap_err_with(|| {
                     format!(
                         "failed to parse lookup file '{}'",
-                        file.path().to_string_lossy()
+                        path.to_str().unwrap_or(&path.to_string_lossy())
                     )
                 })
                 .unwrap();
@@ -98,10 +97,10 @@ impl Lookup {
     /// Search the lookup table for all possible completions for the given text
     pub fn get_completions(&self, text: &str) -> Vec<Rc<LookupEntry>> {
         self.entries
-            .keys()
-            .filter_map(|e| {
-                if e.starts_with(text) {
-                    return Some(self.entries.get(e).unwrap().clone());
+            .iter()
+            .filter_map(|(k, v)| {
+                if k.starts_with(text) {
+                    return Some(v.clone());
                 }
                 None
             })

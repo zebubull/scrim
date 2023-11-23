@@ -1,7 +1,7 @@
 use crate::{
     app::{App, ControlType, LookupResult, Selected, Tab},
     lookup::Lookup,
-    player::{Class, ProficiencyLevel},
+    player::{class::Class, skills::ProficiencyLevel},
 };
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -39,12 +39,14 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     KeyCode::Char('k') => *value = std::cmp::min(max, value.saturating_add(1)),
                     _ => {}
                 };
-
-                // Stats and may have changed so we need to do this. It might
-                // be better to change stat and level to CycleFn but i'm too lazy
-                // to check if that's faster and the calculations are relatively light
-                app.player.update_stat_dependants();
-                app.player.update_level_dependants();
+            }
+            Some(ControlType::CycleRecalc(value, min, max)) => {
+                match key_event.code {
+                    KeyCode::Char('j') => *value = std::cmp::max(min, value.saturating_sub(1)),
+                    KeyCode::Char('k') => *value = std::cmp::min(max, value.saturating_add(1)),
+                    _ => {}
+                };
+                app.player.recalculate();
             }
             Some(ControlType::CycleFn(prev, next)) => {
                 match key_event.code {
@@ -149,13 +151,13 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.insert_item_to_tab()?;
                     app.editing = true;
                 }
-                KeyCode::Char('d') if app.current_tab().len() > 0 => {
+                KeyCode::Char('d') if !app.current_tab().is_empty() => {
                     app.delete_item_from_tab()?;
                 }
-                KeyCode::Enter if app.current_tab().len() > 0 => {
+                KeyCode::Enter if !app.current_tab().is_empty() => {
                     app.editing = true;
                 }
-                KeyCode::Char('l') if app.current_tab().len() > 0 => {
+                KeyCode::Char('l') if !app.current_tab().is_empty() => {
                     app.lookup_current_selection(lookup)
                 }
                 KeyCode::Tab => {
@@ -183,7 +185,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 _ => {}
             },
             Some(Selected::Quitting) => match key_event.code {
-                KeyCode::Char('q') | KeyCode::Char('n') => app.selected = None,
+                KeyCode::Char('q' | 'n') => app.selected = None,
                 KeyCode::Char('s') => app.quit(),
                 KeyCode::Char('y') => {
                     if app.player.name.is_empty() {
@@ -216,56 +218,40 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
-            Some(Selected::SpellSlots(idx)) => match key_event.code {
-                KeyCode::Char('a') => {
-                    let remaining = app
-                        .player
-                        .spell_slots_remaining
-                        .nth(idx, &app.player.class)
-                        .clone();
-                    let total = app.player.spell_slots.nth(idx, &app.player.class);
-                    *app.player
-                        .spell_slots_remaining
-                        .nth_mut(idx, &app.player.class) = std::cmp::min(remaining + 1, total)
+            Some(Selected::SpellSlots(idx)) => {
+                let remaining = match app.player.class {
+                    Class::Warlock => &mut app.player.spell_slots_remaining.warlock,
+                    _ => &mut app.player.spell_slots_remaining[idx as usize],
+                };
+                let total = match app.player.class {
+                    Class::Warlock => &mut app.player.spell_slots.warlock,
+                    _ => &mut app.player.spell_slots[idx as usize],
+                };
+                match key_event.code {
+                    KeyCode::Char('a') => *remaining = std::cmp::min(*remaining + 1, *total),
+                    KeyCode::Char('x') => {
+                        *remaining = remaining.saturating_sub(1);
+                    }
+                    KeyCode::Char('A') => {
+                        *total += 1;
+                    }
+                    KeyCode::Char('X') => {
+                        *total = total.saturating_sub(1);
+                        *remaining = std::cmp::min(*remaining, *total);
+                    }
+                    KeyCode::Char('j') if app.player.class != Class::Warlock => {
+                        let new_idx = std::cmp::min(8, idx + 1);
+                        app.selected = Some(Selected::SpellSlots(new_idx));
+                    }
+                    KeyCode::Char('k') if app.player.class != Class::Warlock => {
+                        app.selected = Some(Selected::SpellSlots(idx.saturating_sub(1)));
+                    }
+                    KeyCode::Char('r') => {
+                        app.player.spell_slots_remaining = app.player.spell_slots.clone();
+                    }
+                    _ => {}
                 }
-                KeyCode::Char('x') => {
-                    let remaining = app
-                        .player
-                        .spell_slots_remaining
-                        .nth(idx, &app.player.class)
-                        .clone();
-                    *app.player
-                        .spell_slots_remaining
-                        .nth_mut(idx, &app.player.class) = remaining.saturating_sub(1);
-                }
-                KeyCode::Char('A') => {
-                    *app.player.spell_slots.nth_mut(idx, &app.player.class) += 1;
-                }
-                KeyCode::Char('X') => {
-                    let new_total = app
-                        .player
-                        .spell_slots
-                        .nth(idx, &app.player.class)
-                        .clone()
-                        .saturating_sub(1);
-                    *app.player.spell_slots.nth_mut(idx, &app.player.class) = new_total;
-                    let remaining = app.player.spell_slots_remaining.nth(idx, &app.player.class);
-                    *app.player
-                        .spell_slots_remaining
-                        .nth_mut(idx, &app.player.class) = std::cmp::min(remaining, new_total);
-                }
-                KeyCode::Char('j') if app.player.class != Class::Warlock => {
-                    let new_idx = std::cmp::min(8, idx + 1);
-                    app.selected = Some(Selected::SpellSlots(new_idx));
-                }
-                KeyCode::Char('k') if app.player.class != Class::Warlock => {
-                    app.selected = Some(Selected::SpellSlots(idx.saturating_sub(1)));
-                }
-                KeyCode::Char('r') => {
-                    app.player.spell_slots_remaining = app.player.spell_slots.clone();
-                }
-                _ => {}
-            },
+            }
             Some(Selected::Funds(idx)) => match key_event.code {
                 KeyCode::Char('a') => {
                     let fundage = app.player.funds.nth_mut(idx);
@@ -321,7 +307,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                         Some(LookupResult::Completion(ref vec)) => vec,
                         _ => unreachable!(),
                     };
-                    if options.len() > 0 {
+                    if !options.is_empty() {
                         app.current_lookup =
                             Some(LookupResult::Success(options[idx as usize].clone()))
                     } else {
@@ -397,8 +383,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 KeyCode::Char('E') => app.selected = Some(Selected::SpellSlots(0)),
                 KeyCode::Char('F') => app.selected = Some(Selected::Funds(0)),
                 KeyCode::Char('P') => app.selected = Some(Selected::Proficiency(0)),
-                KeyCode::Char('C') => app.lookup_class(&lookup),
-                KeyCode::Char('R') => app.lookup_race(&lookup),
+                KeyCode::Char('C') => app.lookup_class(lookup),
+                KeyCode::Char('R') => app.lookup_race(lookup),
                 KeyCode::Char('L') => {
                     app.selected = Some(Selected::FreeLookup);
                     app.lookup_buffer.clear();

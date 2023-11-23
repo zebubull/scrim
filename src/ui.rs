@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::{
     app::{App, LookupResult, Selected},
-    player::{Class, SpellSlots, SKILL_NAMES},
+    player::{class::Class, skills::SKILL_NAMES, spells::SpellSlots},
     widgets::{
         info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
     },
@@ -75,7 +75,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((55, 65), f.size());
     clear_rect(f, chunk);
 
-    app.popup_height = chunk.height as u32 - 4;
+    app.popup_height = u32::from(chunk.height) - 4;
 
     let block = Block::default()
         .title(if let Some(LookupResult::Files(_)) = app.current_lookup {
@@ -93,7 +93,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
     match lookup {
         LookupResult::Invalid(search) => {
-            let p = Paragraph::new(format!("No entry found for '{}'", search))
+            let p = Paragraph::new(format!("No entry found for '{search}'"))
                 .black()
                 .wrap(Wrap { trim: false });
             f.render_widget(
@@ -105,7 +105,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             );
         }
         LookupResult::Success(entry) => {
-            let render_short = entry.description_short.len() > 0;
+            let render_short = !entry.description_short.is_empty();
             let vchunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
@@ -124,18 +124,18 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                     ]
                 })
                 .split(chunk);
-            let title = Paragraph::new(format!("{}", entry.name))
+            let title = Paragraph::new(entry.name.to_string())
                 .black()
                 .bold()
                 .alignment(Alignment::Center);
             f.render_widget(title, vchunks[0]);
             if render_short {
-                let short = Paragraph::new(format!("{}", entry.description_short))
+                let short = Paragraph::new(entry.description_short.to_string())
                     .black()
                     .alignment(Alignment::Left);
                 f.render_widget(short, vchunks[1]);
             }
-            let desc = Paragraph::new(format!("{}", entry.description))
+            let desc = Paragraph::new(entry.description.to_string())
                 .black()
                 .alignment(Alignment::Left)
                 .scroll((app.popup_scroll as u16, 0))
@@ -169,7 +169,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 Some(Selected::Completion(idx, _)) => idx,
                 Some(Selected::FreeLookupSelect(idx)) => idx,
                 _ => 0,
-            } as u32;
+            };
 
             lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
@@ -197,7 +197,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             let selected = match app.selected {
                 Some(Selected::Load(idx)) => idx,
                 _ => 0,
-            } as u32;
+            };
 
             lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
@@ -234,21 +234,21 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
 
     let mut lines = if let Class::Warlock = app.player.class {
         let level = SpellSlots::warlock_slot_level(app.player.level);
-        vec![Line::from(Span::from(
+        vec![Line::from(
             format!("{}{}: {} / {}", level, ordinal(level), t.warlock, r.warlock)
                 .black()
                 .on_yellow(),
-        ))]
+        )]
     } else {
         (0..9)
             .map(|i| {
-                let total = t.nth(i, &app.player.class);
+                let total = t[i];
                 Line::from(
                     Span::from(format!(
                         "{}{}: {} / {}",
                         i + 1,
-                        ordinal(i + 1),
-                        r.nth(i, &app.player.class),
+                        ordinal(i as u32 + 1),
+                        r[i],
                         total
                     ))
                     .on_yellow()
@@ -259,7 +259,7 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
     };
 
     let selected = match app.selected {
-        Some(Selected::SpellSlots(idx)) => idx as u32,
+        Some(Selected::SpellSlots(idx)) => idx,
         _ => 0,
     };
 
@@ -297,7 +297,7 @@ fn show_funds(f: &mut Frame, app: &App) {
         .collect();
 
     let selected = match app.selected {
-        Some(Selected::Funds(idx)) => idx as u32,
+        Some(Selected::Funds(idx)) => idx,
         _ => 0,
     };
 
@@ -357,7 +357,7 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 55), f.size());
     clear_rect(f, chunk);
 
-    app.popup_height = chunk.height as u32 - 3;
+    app.popup_height = u32::from(chunk.height) - 3;
 
     let mut lines: Vec<Line> = app
         .player
@@ -460,11 +460,13 @@ pub fn render(app: &mut App, f: &mut Frame) {
     f.render_widget(tab_block, info_tab_chunks[1]);
 
     match app.selected {
-        Some(Selected::Completion(_, _))
-        | Some(Selected::ItemLookup(_))
-        | Some(Selected::ClassLookup)
-        | Some(Selected::FreeLookupSelect(_))
-        | Some(Selected::Load(_)) => show_lookup(f, app),
+        Some(
+            Selected::Completion(_, _)
+            | Selected::ItemLookup(_)
+            | Selected::ClassLookup
+            | Selected::FreeLookupSelect(_)
+            | Selected::Load(_),
+        ) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
         Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
         Some(Selected::Funds(_)) => show_funds(f, app),

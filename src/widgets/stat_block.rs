@@ -8,7 +8,7 @@ use ratatui::{
     },
 };
 
-use crate::{player::Stats, widgets::colored_span};
+use crate::{player::stats::Stats, widgets::colored_span};
 
 /// A widget that renders the player's stat block.
 pub struct StatBlock<'a> {

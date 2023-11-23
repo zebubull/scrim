@@ -3,7 +3,6 @@ use std::{path::Path, rc::Rc};
 use crate::{
     lookup::{Lookup, LookupEntry},
     player::Player,
-    Cycle,
 };
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use strum_macros::Display;
@@ -55,6 +54,11 @@ pub enum ControlType<'a> {
     /// reference to the number is provided, as well as a minimum and maximum
     /// value, respectively.
     Cycle(&'a mut u32, u32, u32),
+    /// A control type that cycles numericaly upwards or downwards. A mutable
+    /// reference to the number is provided, as well as a minimum and maximum
+    /// value, respectively. This also indicates that the change will require
+    /// a recalculation of player values.
+    CycleRecalc(&'a mut u32, u32, u32),
     /// A control type that cycles upwards or downwards through non-numerical values.
     /// `prev` and `next` functions are given, respectively.
     CycleFn(fn(&mut App), fn(&mut App)),
@@ -110,7 +114,7 @@ impl App {
         Self::default()
     }
 
-    /// Requests the application to exit by updating the should_quit value.
+    /// Requests the application to exit by updating the `should_quit` value.
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
@@ -140,12 +144,11 @@ impl App {
     /// new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
-        let path = format!(
-            "{}",
-            self.path
-                .as_ref()
-                .unwrap_or(&format!("{}.player", self.player.name))
-        );
+        let path = self
+            .path
+            .as_ref()
+            .unwrap_or(&format!("{}.player", self.player.name))
+            .to_string();
         std::fs::write(path, data)?;
         Ok(())
     }
@@ -155,7 +158,7 @@ impl App {
     /// This method will recalculate the current tab scroll.
     pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
         // tab frame size
-        self.viewport_height = height as u32 - 9;
+        self.viewport_height = u32::from(height) - 9;
 
         let len = self.current_tab().len() as u32;
 
@@ -168,7 +171,7 @@ impl App {
 
     /// Returns a reference to the data of the currently selected tab.
     pub fn current_tab(&self) -> &Vec<String> {
-        use Tab::*;
+        use Tab::{Inventory, Notes, Spells};
         match self.current_tab {
             Notes => &self.player.notes,
             Inventory => &self.player.inventory,
@@ -178,7 +181,7 @@ impl App {
 
     /// Returns a mutable reference to the data of the currently selected tab.
     pub fn current_tab_mut(&mut self) -> &mut Vec<String> {
-        use Tab::*;
+        use Tab::{Inventory, Notes, Spells};
         match self.current_tab {
             Notes => &mut self.player.notes,
             Inventory => &mut self.player.inventory,
@@ -211,7 +214,7 @@ impl App {
             _ => return Err(eyre!("cannot append while a tab is not selected")),
         } as usize;
 
-        if self.current_tab().len() > 0 {
+        if !self.current_tab().is_empty() {
             item += 1;
         }
 
@@ -346,12 +349,12 @@ impl App {
     pub fn calculate_scroll(scroll: u32, selected: u32, height: u32) -> u32 {
         if selected < scroll {
             // If the current line is above the viewport, scroll up to it
-            return selected;
+            selected
         } else if selected >= scroll + height {
             // If the current line is below the viewport, scroll down to it
-            return selected - height + 1;
+            selected - height + 1
         } else {
-            return scroll;
+            scroll
         }
     }
 
@@ -359,7 +362,7 @@ impl App {
     ///
     /// This method does not perform any kind of caching.
     pub fn lookup_current_selection(&mut self, lookup: &Lookup) {
-        use Tab::*;
+        use Tab::{Inventory, Notes, Spells};
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
             _ => return,
@@ -401,7 +404,7 @@ impl App {
     /// Lookup the player's current race.
     pub fn lookup_race(&mut self, lookup: &Lookup) {
         let text = self.player.race.to_lookup_string();
-        let lookup = lookup.get_entry(&text);
+        let lookup = lookup.get_entry(text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
         self.current_lookup = match lookup {
@@ -413,13 +416,15 @@ impl App {
         self.popup_scroll = 0;
     }
 
+    /// Lookup all player files in the cwd
     pub fn lookup_files(&mut self) -> Result<()> {
         let dir = std::env::current_dir()?;
         let files = std::fs::read_dir(dir)?;
 
         let names: Vec<String> = files
-            .map(|f| f.unwrap().file_name().to_str().unwrap().to_owned())
-            .filter(|f| f != ".")
+            .map(|f| f.unwrap().path())
+            .filter(|f| f.is_file() && f.extension().unwrap_or_default() == "player")
+            .map(|f| f.to_str().unwrap_or(&f.to_string_lossy()).to_owned())
             .collect();
 
         self.selected = Some(Selected::Load(0));
@@ -430,7 +435,7 @@ impl App {
 
     /// Get all completions for the currently selected tab item
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
-        use Tab::*;
+        use Tab::{Inventory, Notes, Spells};
         let item = match self.selected {
             Some(Selected::TabItem(item)) => item,
             _ => return Ok(()),
@@ -454,7 +459,7 @@ impl App {
         let lookup = lookup.get_completions(&text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
-        if lookup.len() > 0 {
+        if !lookup.is_empty() {
             LookupResult::Completion(lookup)
         } else {
             LookupResult::Invalid(format!("{}:{}", text.clone(), lookup.len()))
@@ -483,39 +488,53 @@ impl App {
     pub fn get_selected_type(&mut self) -> Option<ControlType> {
         match self.selected {
             None
-            | Some(Selected::Quitting)
-            | Some(Selected::ItemLookup(_))
-            | Some(Selected::Completion(_, _))
-            | Some(Selected::ClassLookup)
-            | Some(Selected::SpellSlots(_))
-            | Some(Selected::Funds(_))
-            | Some(Selected::FreeLookupSelect(_))
-            | Some(Selected::Proficiency(_))
-            | Some(Selected::Load(_)) => None,
+            | Some(
+                Selected::Quitting
+                | Selected::ItemLookup(_)
+                | Selected::Completion(_, _)
+                | Selected::ClassLookup
+                | Selected::SpellSlots(_)
+                | Selected::Funds(_)
+                | Selected::FreeLookupSelect(_)
+                | Selected::Proficiency(_)
+                | Selected::Load(_),
+            ) => None,
             Some(Selected::TopBarItem(idx)) => match idx {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(
-                    // Currently, there are no calculations made with the race so just
-                    // raw setting it is fine.
-                    |app| app.player.update_race(app.player.race.prev()),
-                    |app| app.player.update_race(app.player.race.next()),
+                    |app| app.player.update_race(app.player.race.get_prev()),
+                    |app| app.player.update_race(app.player.race.get_next()),
                 )),
-                2 => Some(ControlType::Cycle(&mut self.player.level, 1, 20)),
+                2 => Some(ControlType::CycleRecalc(&mut self.player.level, 1, 20)),
                 3 => Some(ControlType::CycleFn(
-                    |app| app.player.update_class(app.player.class.prev()),
-                    |app| app.player.update_class(app.player.class.next()),
+                    |app| {
+                        app.player.class.cycle_prev();
+                        app.player.recalculate();
+                    },
+                    |app| {
+                        app.player.class.cycle_next();
+                        app.player.recalculate();
+                    },
                 )),
                 4 => Some(ControlType::CycleFn(
                     // Just like race, there are no calculations made with the alignment
                     // so just raw setting it is fine.
-                    |app| app.player.alignment = app.player.alignment.prev(),
-                    |app| app.player.alignment = app.player.alignment.next(),
+                    |app| {
+                        app.player.alignment.cycle_prev();
+                        app.player.recalculate()
+                    },
+                    |app| {
+                        app.player.alignment.cycle_next();
+                        app.player.recalculate()
+                    },
                 )),
                 _ => unreachable!(),
             },
-            Some(Selected::StatItem(idx)) => {
-                Some(ControlType::Cycle(self.player.stats.nth(idx), 1, 20))
-            }
+            Some(Selected::StatItem(idx)) => Some(ControlType::CycleRecalc(
+                &mut self.player.stats[idx as usize],
+                1,
+                30,
+            )),
             Some(Selected::InfoItem(idx)) => match idx {
                 0 => Some(ControlType::Cycle(
                     &mut self.player.hp,
@@ -540,8 +559,8 @@ impl App {
                     self.player.hit_dice,
                 )),
                 6 => Some(ControlType::CycleFn(
-                    |app| app.player.background = app.player.background.prev(),
-                    |app| app.player.background = app.player.background.next(),
+                    |app| app.player.background.cycle_prev(),
+                    |app| app.player.background.cycle_next(),
                 )),
                 _ => unreachable!(),
             },
