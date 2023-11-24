@@ -305,6 +305,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.selected = Some(Selected::ClassLookup);
                     let options = match app.current_lookup {
                         Some(LookupResult::Completion(ref vec)) => vec,
+                        Some(LookupResult::Invalid(_)) => return Ok(()),
                         _ => unreachable!(),
                     };
                     if !options.is_empty() {

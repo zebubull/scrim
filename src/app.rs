@@ -462,7 +462,7 @@ impl App {
         if !lookup.is_empty() {
             LookupResult::Completion(lookup)
         } else {
-            LookupResult::Invalid(format!("{}:{}", text.clone(), lookup.len()))
+            LookupResult::Invalid(format!("{}", text.clone()))
         }
     }
 
