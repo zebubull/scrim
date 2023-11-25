@@ -7,14 +7,14 @@ use ratatui::{
 
 /// A widget that can render a vector of elements
 pub struct VecView<'a, T> {
-    data: &'a Vec<T>,
-    fg: Color,
-    bg: Color,
-    wrap: bool,
-    scroll: u32,
-    highlight: Option<(u32, Color)>,
-    block: Option<Block<'a>>,
-    alignment: Alignment,
+    data: &'a [T],
+    pub(super) fg: Color,
+    pub(super) bg: Color,
+    pub(super) wrap: bool,
+    pub(super) scroll: u32,
+    pub(super) highlight: Option<(u32, Color)>,
+    pub(super) block: Option<Block<'a>>,
+    pub(super) alignment: Alignment,
 }
 
 impl<'a, T> VecView<'a, T>
@@ -64,6 +64,10 @@ where
         self.alignment = alignment;
         self
     }
+
+    pub fn style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
+    }
 }
 
 impl<'a, T> Widget for VecView<'a, T>
@@ -83,7 +87,7 @@ where
             .iter()
             .skip(self.scroll as usize)
             .take(content_height as usize)
-            .map(|s| Line::from(Span::styled(s, Style::default().fg(self.fg).bg(self.bg))))
+            .map(|s| Line::from(Span::styled(s, self.style())))
             .collect();
 
         if let Some((line, color)) = self.highlight {
@@ -102,6 +106,24 @@ where
         }
 
         p.render(area, buf);
+    }
+}
+
+impl<'a, T> From<&'a [T]> for VecView<'a, T>
+where
+    &'a T: Into<Cow<'a, str>>,
+{
+    fn from(value: &'a [T]) -> Self {
+        Self {
+            data: value,
+            fg: Color::White,
+            bg: Color::Black,
+            wrap: false,
+            scroll: 0,
+            highlight: None,
+            block: None,
+            alignment: Alignment::Left,
+        }
     }
 }
 

@@ -6,6 +6,7 @@ pub mod player_bar;
 pub mod stat_block;
 /// Tab-panel-drawing widget
 pub mod tab_panel;
+pub mod vec_popup;
 pub mod vec_view;
 
 macro_rules! separator {

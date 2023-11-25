@@ -121,7 +121,7 @@ impl App {
     }
 
     /// Attempts to load the player at the given file path.
-    /// 
+    ///
     /// The app will remember the load path for future saving.
     pub fn load_player(&mut self, path: PathBuf) -> Result<()> {
         self.player = Player::load(path.as_path())?;
@@ -147,12 +147,13 @@ impl App {
     }
 
     /// Update the app's internal viewport height.
-    /// 
+    ///
     /// This value is used in scroll calculations,
     /// so calling this function may scroll the active pane.
     pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
         // TODO: popup frame provider needs to be updated as well.
-        self.tab_scroll_provider.update_frame_height(crate::ui::tab_pane_height(height) as u32);
+        self.tab_scroll_provider
+            .update_frame_height(crate::ui::tab_pane_height(height) as u32);
         Ok(())
     }
 
@@ -195,7 +196,8 @@ impl App {
     /// Switches the current tab and recalculates the current tab scroll.
     pub fn update_tab(&mut self, tab: Tab) -> Result<()> {
         self.current_tab = tab;
-        self.tab_scroll_provider.set_max(self.current_tab().len() as u32);
+        self.tab_scroll_provider
+            .set_max(self.current_tab().len() as u32);
         Ok(())
     }
 
@@ -443,8 +445,12 @@ impl App {
             },
             Some(Selected::TabItem) => Some(ControlType::TextInput(match self.current_tab {
                 Tab::Notes => &mut self.player.notes[self.tab_scroll_provider.get_line() as usize],
-                Tab::Inventory => &mut self.player.inventory[self.tab_scroll_provider.get_line() as usize],
-                Tab::Spells => &mut self.player.spells[self.tab_scroll_provider.get_line() as usize],
+                Tab::Inventory => {
+                    &mut self.player.inventory[self.tab_scroll_provider.get_line() as usize]
+                }
+                Tab::Spells => {
+                    &mut self.player.spells[self.tab_scroll_provider.get_line() as usize]
+                }
             })),
             Some(Selected::FreeLookup) => Some(ControlType::TextInput(&mut self.lookup_buffer)),
         }

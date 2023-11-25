@@ -208,8 +208,12 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                         *total = total.saturating_sub(1);
                         *remaining = std::cmp::min(*remaining, *total);
                     }
-                    KeyCode::Char('k') if app.player.class != Class::Warlock => app.popup_scroll_mut().scroll_up(1),
-                    KeyCode::Char('j') if app.player.class != Class::Warlock => app.popup_scroll_mut().scroll_down(1),
+                    KeyCode::Char('k') if app.player.class != Class::Warlock => {
+                        app.popup_scroll_mut().scroll_up(1)
+                    }
+                    KeyCode::Char('j') if app.player.class != Class::Warlock => {
+                        app.popup_scroll_mut().scroll_down(1)
+                    }
                     KeyCode::Char('r') => {
                         app.player.spell_slots_remaining = app.player.spell_slots.clone();
                     }
@@ -245,7 +249,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.lookup_buffer.push(c);
                 }
                 KeyCode::Tab | KeyCode::Enter => {
-                    app.current_lookup = Some(app.get_completion(&app.lookup_buffer.clone(), lookup));
+                    app.current_lookup =
+                        Some(app.get_completion(&app.lookup_buffer.clone(), lookup));
                     app.selected = Some(Selected::FreeLookupSelect);
                 }
                 _ => {}
@@ -267,8 +272,9 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                         _ => unreachable!(),
                     };
                     if !options.is_empty() {
-                        app.current_lookup =
-                            Some(LookupResult::Success(options[app.popup_scroll().get_line() as usize].clone()))
+                        app.current_lookup = Some(LookupResult::Success(
+                            options[app.popup_scroll().get_line() as usize].clone(),
+                        ))
                     } else {
                         app.selected = None;
                         app.current_lookup = None;
@@ -283,9 +289,13 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
                     KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
                     KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
-                    KeyCode::Char('p') => app.player.skills[idx as usize] = ProficiencyLevel::Normal,
+                    KeyCode::Char('p') => {
+                        app.player.skills[idx as usize] = ProficiencyLevel::Normal
+                    }
                     KeyCode::Char('n') => app.player.skills[idx as usize] = ProficiencyLevel::None,
-                    KeyCode::Char('e') => app.player.skills[idx as usize] = ProficiencyLevel::Double,
+                    KeyCode::Char('e') => {
+                        app.player.skills[idx as usize] = ProficiencyLevel::Double
+                    }
                     KeyCode::Char('h') => app.player.skills[idx as usize] = ProficiencyLevel::Half,
                     KeyCode::Char('q') | KeyCode::Enter => {
                         app.selected = None;
@@ -293,7 +303,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     }
                     _ => {}
                 }
-            },
+            }
             Some(Selected::Load) => match key_event.code {
                 KeyCode::Char('k') => app.popup_scroll_mut().scroll_up(1),
                 KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
@@ -308,7 +318,9 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.tab_scroll_mut().reset();
                     app.update_tab(Tab::Notes)?;
                     let p = match &app.current_lookup {
-                        Some(LookupResult::Files(ref f)) => &f[app.popup_scroll().get_line() as usize],
+                        Some(LookupResult::Files(ref f)) => {
+                            &f[app.popup_scroll().get_line() as usize]
+                        }
                         _ => unreachable!(),
                     };
                     app.load_player(PathBuf::from(p))?;

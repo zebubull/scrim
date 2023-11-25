@@ -77,7 +77,7 @@ impl<'a> Widget for TabPanel<'a> {
             Tab::Spells => &self.player.spells,
         };
 
-        let mut tab_view = VecView::from(tab)
+        let mut tab_view = VecView::from(tab.as_slice())
             .alignment(Alignment::Left)
             .fg(Color::Yellow)
             .bg(Color::Black)

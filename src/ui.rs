@@ -3,14 +3,18 @@ use ratatui::{
     prelude::{Constraint, Direction, Frame, Layout},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
+    widgets::{Block, Borders, Padding, Paragraph, Wrap},
 };
 
 use crate::{
     core::{App, LookupResult, Selected},
     player::{class::Class, skills::SKILL_NAMES, spells::SpellSlots},
     widgets::{
-        info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
+        info_bar::InfoBar,
+        player_bar::PlayerBar,
+        stat_block::StatBlock,
+        tab_panel::TabPanel,
+        vec_popup::{PopupSize, VecPopup},
     },
 };
 
@@ -48,24 +52,28 @@ fn clear_rect(f: &mut Frame, rect: Rect) {
 }
 
 /// Show the quit confirmation menu
-///
-/// This could probably be moved to its own widget but I haven't done that yet.
 fn show_quit_popup(f: &mut Frame) {
-    let chunk = get_popup_rect((25, 20), f.size());
-    clear_rect(f, chunk);
+    let data =  [
+        String::from("y - yes (save)"),
+        String::from("s - yes (don't save)"),
+        String::from("q/n - no"),
+    ];
 
-    let text = Paragraph::new("y - yes (save)\ns - yes (don't save)\nq/n - no")
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("Really quit?")
-                .title_alignment(Alignment::Center),
-        )
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Black).bg(Color::Yellow));
+    let popup = VecPopup::new(
+        &data[..],
+        PopupSize::Absolute(22, 5),
+    )
+    .fg(Color::Black)
+    .bg(Color::Yellow)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Really Quit?")
+            .title_alignment(Alignment::Center),
+    )
+    .alignment(Alignment::Left);
 
-    f.render_widget(text, chunk);
+    f.render_widget(popup, f.size());
 }
 
 /// Show the reference lookup menu.
@@ -101,7 +109,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                     .constraints(vec![Constraint::Percentage(100)])
                     .split(chunk)[0],
             );
-            app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
+            app.popup_scroll_mut()
+                .update_frame_height(chunk.height as u32 - 2);
         }
         LookupResult::Success(entry) => {
             let entry = entry.clone();
@@ -186,7 +195,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .wrap(Wrap { trim: false });
             f.render_widget(options, vchunks[2]);
 
-            app.popup_scroll_mut().update_frame_height(vchunks[2].height as u32);
+            app.popup_scroll_mut()
+                .update_frame_height(vchunks[2].height as u32);
         }
         LookupResult::Files(entries) => {
             let mut lines: Vec<Line> = entries
@@ -213,7 +223,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .wrap(Wrap { trim: false });
             f.render_widget(options, layout[0]);
 
-            app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 4);
+            app.popup_scroll_mut()
+                .update_frame_height(chunk.height as u32 - 4);
         }
     }
 }
@@ -235,7 +246,8 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 75), f.size());
     clear_rect(f, chunk);
 
-    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
+    app.popup_scroll_mut()
+        .update_frame_height(chunk.height as u32 - 2);
 
     let t = &app.player.spell_slots;
     let r = &app.player.spell_slots_remaining;
@@ -290,7 +302,8 @@ fn show_funds(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 75), f.size());
     clear_rect(f, chunk);
 
-    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
+    app.popup_scroll_mut()
+        .update_frame_height(chunk.height as u32 - 2);
 
     let mut lines: Vec<Line> = (0..4)
         .map(|i| {
@@ -361,7 +374,8 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 55), f.size());
     clear_rect(f, chunk);
 
-    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
+    app.popup_scroll_mut()
+        .update_frame_height(chunk.height as u32 - 2);
 
     let mut lines: Vec<Line> = app
         .player
@@ -404,7 +418,8 @@ fn main_layout(parent: Rect) -> (Rect, Rect, Rect) {
             Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Min(1),
-        ]).split(parent);
+        ])
+        .split(parent);
 
     (chunks[0], chunks[1], chunks[2])
 }
@@ -483,7 +498,6 @@ fn draw_static_widgets(app: &mut App, f: &mut Frame) {
             None
         });
     f.render_widget(tab_block, tab_rect);
-
 }
 
 /// Render all ui widgets using the data located in `app`.
