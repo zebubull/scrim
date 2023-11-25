@@ -24,7 +24,7 @@ impl ScrollProvider {
         }
 
         let line_pos = new_line as i32 - self.current_scroll as i32;
-        if line_pos >= self.frame_height as i32 - 1 {
+        if line_pos >= self.frame_height as i32 {
             // line pos starts from zero but frame height starts from 1 :p
             self.current_scroll = self.current_scroll.saturating_add_signed(line_pos - (self.frame_height as i32 - 1));
         }
@@ -55,10 +55,11 @@ impl ScrollProvider {
     }
 
     pub fn set_max(&mut self, mut max: u32) {
+        max = max.max(1);
         self.maximum_lines = Some(max);
         if self.current_line >= max {
-            max = max.saturating_sub(1);
             self.current_scroll = max.saturating_sub(self.frame_height);
+            max = max.saturating_sub(1);
             self.current_line = max;
         }
     }
