@@ -169,10 +169,10 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 _ => {}
             },
             Some(Selected::ItemLookup(_)) => match key_event.code {
-                KeyCode::Char('k') => app.popup_scroll_mut().scroll_up(1),
-                KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
-                KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
-                KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
+                KeyCode::Char('k') => app.popup_scroll_mut().move_up(1),
+                KeyCode::Char('j') => app.popup_scroll_mut().move_down(1),
+                KeyCode::Char('K') => app.popup_scroll_mut().move_up(10),
+                KeyCode::Char('J') => app.popup_scroll_mut().move_down(10),
                 KeyCode::Char('q') => {
                     app.selected = Some(Selected::TabItem);
                     app.current_lookup = None;
@@ -180,10 +180,10 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 _ => {}
             },
             Some(Selected::ClassLookup) => match key_event.code {
-                KeyCode::Char('k') => app.popup_scroll_mut().scroll_up(1),
-                KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
-                KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
-                KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
+                KeyCode::Char('k') => app.popup_scroll_mut().move_up(1),
+                KeyCode::Char('j') => app.popup_scroll_mut().move_down(1),
+                KeyCode::Char('K') => app.popup_scroll_mut().move_up(10),
+                KeyCode::Char('J') => app.popup_scroll_mut().move_down(10),
                 KeyCode::Char('q') => {
                     app.selected = None;
                     app.current_lookup = None;
