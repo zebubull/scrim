@@ -1,5 +1,5 @@
-/// Application state module
-pub mod app;
+/// Core application functionality
+pub mod core;
 
 /// UI rendering module
 pub mod ui;

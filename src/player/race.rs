@@ -2,6 +2,8 @@ use num_derive::FromPrimitive;
 use serde_derive::{Deserialize, Serialize};
 use strum::{Display, EnumCount};
 
+use super::stats::Stats;
+
 #[derive(
     Clone, Copy, Default, FromPrimitive, Serialize, Deserialize, Display, EnumCount, PartialEq,
 )]
@@ -36,10 +38,7 @@ pub enum Race {
 
 impl Race {
     pub fn to_lookup_string(&self) -> &'static str {
-        use Race::{
-            DarkElf, Dragonborn, ForestGnome, HalfElf, HalfOrc, HighElf, HillDwarf, Human,
-            LightfootHalfling, MountainDwarf, RockGnome, StoutHalfling, Tiefling, WoodElf,
-        };
+        use Race::*;
         match self {
             Dragonborn => "dragonborn",
             HillDwarf | MountainDwarf => "dwarf",
@@ -69,5 +68,59 @@ impl Race {
 
     pub fn cycle_prev(&mut self) {
         *self = self.get_prev()
+    }
+
+    pub fn stats(&self) -> Stats {
+        use Race::*;
+        let strength = match self {
+            MountainDwarf | Dragonborn | HalfOrc => 2,
+            Human => 1,
+            _ => 0,
+        };
+        let dexterity = match self {
+            HighElf | WoodElf | DarkElf | LightfootHalfling | StoutHalfling => 2,
+            Human | ForestGnome => 1,
+            _ => 0,
+        };
+
+        let constitution = match self {
+            MountainDwarf | HillDwarf => 2,
+            StoutHalfling | Human | RockGnome => 1,
+            _ => 0,
+        };
+
+        let intelligence = match self {
+            ForestGnome | RockGnome => 2,
+            HighElf | Human | Tiefling => 1,
+            _ => 0,
+        };
+
+        let wisdom = match self {
+            HillDwarf | WoodElf | Human => 1,
+            _ => 0,
+        };
+
+        let charisma = match self {
+            HalfElf | Tiefling => 2,
+            DarkElf | LightfootHalfling | Human | Dragonborn => 1,
+            _ => 0,
+        };
+
+        Stats {
+            strength,
+            dexterity,
+            constitution,
+            intelligence,
+            wisdom,
+            charisma,
+        }
+    }
+
+    pub fn health_bonus(&self) -> u32 {
+        use Race::*;
+        match self {
+            HillDwarf => 1,
+            _ => 0,
+        }
     }
 }

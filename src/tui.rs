@@ -8,7 +8,7 @@ use crossterm::{
 
 pub type CrosstermTerminal = ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>;
 
-use crate::{app::App, event::EventHandler, ui};
+use crate::{core::App, event::EventHandler, ui};
 
 pub struct Tui {
     terminal: CrosstermTerminal,

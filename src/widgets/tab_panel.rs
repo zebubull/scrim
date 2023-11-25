@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{app::Tab, player::Player, widgets::vec_view::VecView};
+use crate::{core::Tab, player::Player, widgets::vec_view::VecView};
 
 /// A widget that renders the current tab panel, tab selection, and scroll display.
 pub struct TabPanel<'a> {
@@ -82,11 +82,22 @@ impl<'a> Widget for TabPanel<'a> {
             .fg(Color::Yellow)
             .bg(Color::Black)
             .scroll_to(self.scroll as u32)
-            .block(Block::default().title(format!("{} (t)", self.tab)).borders(Borders::ALL));
+            .block(
+                Block::default()
+                    .title(format!("{} (t)", self.tab))
+                    .borders(Borders::ALL),
+            );
 
         if let Some(item) = self.highlight {
             if !tab.is_empty() {
-                tab_view = tab_view.highlight(item as u32, if self.editing { Color::Green } else { Color::Yellow });
+                tab_view = tab_view.highlight(
+                    item as u32,
+                    if self.editing {
+                        Color::Green
+                    } else {
+                        Color::Yellow
+                    },
+                );
             }
         }
 
@@ -106,13 +117,15 @@ impl<'a> Widget for TabPanel<'a> {
             Tab::Spells => 4,
         };
 
-        text[idx].patch_style(Style::default()
-            .fg(Color::Black)
-            .bg(if self.highlight.is_some() {
-                Color::Yellow
-            } else {
-                Color::White
-            }));
+        text[idx].patch_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(if self.highlight.is_some() {
+                    Color::Yellow
+                } else {
+                    Color::White
+                }),
+        );
 
         Paragraph::new(vec![Line::from(text)])
             .alignment(Alignment::Left)
@@ -120,7 +133,7 @@ impl<'a> Widget for TabPanel<'a> {
 
         let len = tab.len() as u16;
         let height = content_chunk.height - 2; // -2 for borders
-        // Draw the scroll percentage display
+                                               // Draw the scroll percentage display
         let text = if self.scroll == 0 {
             String::from("TOP")
         } else if self.scroll >= len - height {
@@ -129,7 +142,6 @@ impl<'a> Widget for TabPanel<'a> {
             format!("{}%", self.scroll * 100 / (len as u16 - height as u16))
         };
 
-        Paragraph::new(vec![Line::from(Span::from(text).white())])
-            .render(scroll_chunk, buf);
+        Paragraph::new(vec![Line::from(Span::from(text).white())]).render(scroll_chunk, buf);
     }
 }

@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, LookupResult, Selected},
+    core::{App, LookupResult, Selected},
     player::{class::Class, skills::SKILL_NAMES, spells::SpellSlots},
     widgets::{
         info_bar::InfoBar, player_bar::PlayerBar, stat_block::StatBlock, tab_panel::TabPanel,
@@ -75,7 +75,6 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((55, 65), f.size());
     clear_rect(f, chunk);
 
-
     let block = Block::default()
         .title(if let Some(LookupResult::Files(_)) = app.current_lookup {
             "File Select"
@@ -92,7 +91,6 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
     match lookup {
         LookupResult::Invalid(search) => {
-            app.popup_height = u32::from(chunk.height) - 2;
             let p = Paragraph::new(format!("No entry found for '{search}'"))
                 .black()
                 .wrap(Wrap { trim: false });
@@ -103,8 +101,10 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                     .constraints(vec![Constraint::Percentage(100)])
                     .split(chunk)[0],
             );
+            app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
         }
         LookupResult::Success(entry) => {
+            let entry = entry.clone();
             let render_short = !entry.description_short.is_empty();
             let vchunks = Layout::default()
                 .direction(Direction::Vertical)
@@ -125,7 +125,11 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 })
                 .split(chunk);
 
-            app.popup_height = if render_short { u32::from(chunk.height) - 6 } else { u32::from(chunk.height) - 4 };
+            app.popup_scroll_mut().update_frame_height(if render_short {
+                u32::from(chunk.height) - 6
+            } else {
+                u32::from(chunk.height) - 4
+            });
 
             let title = Paragraph::new(entry.name.to_string())
                 .black()
@@ -143,7 +147,7 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             let desc = Paragraph::new(entry.description.to_string())
                 .black()
                 .alignment(Alignment::Left)
-                .scroll((app.popup_scroll as u16, 0))
+                .scroll((app.popup_scroll().get_scroll() as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(desc, vchunks[if render_short { 3 } else { 2 }]);
         }
@@ -158,7 +162,6 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 ])
                 .split(chunk);
 
-            app.popup_height = vchunks[2].height as u32;
             let title = Paragraph::new(format!("{} results founds...", entries.len()))
                 .black()
                 .bold()
@@ -167,18 +170,14 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
 
             let mut lines: Vec<Line> = entries
                 .iter()
-                .skip(app.popup_scroll as usize)
-                .take(app.popup_height as usize)
+                .skip(app.popup_scroll().get_scroll() as usize)
+                .take(vchunks[2].height as usize)
                 .map(|e| Line::from(Span::from(&e.name).on_yellow()))
                 .collect();
 
-            let selected = match app.selected {
-                Some(Selected::Completion(idx, _)) => idx,
-                Some(Selected::FreeLookupSelect(idx)) => idx,
-                _ => 0,
-            };
+            let selected = app.popup_scroll().get_line();
 
-            lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
+            lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
             let options = Paragraph::new(lines)
@@ -186,13 +185,14 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: false });
             f.render_widget(options, vchunks[2]);
+
+            app.popup_scroll_mut().update_frame_height(vchunks[2].height as u32);
         }
         LookupResult::Files(entries) => {
-            app.popup_height = u32::from(chunk.height) - 4;
             let mut lines: Vec<Line> = entries
                 .iter()
-                .skip(app.popup_scroll as usize)
-                .take(app.popup_height as usize)
+                .skip(app.popup_scroll().get_scroll() as usize)
+                .take(chunk.height as usize - 4)
                 .map(|e| Line::from(Span::from(e).on_yellow()))
                 .collect();
 
@@ -201,20 +201,19 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .margin(1)
                 .split(chunk);
 
-            let selected = match app.selected {
-                Some(Selected::Load(idx)) => idx,
-                _ => 0,
-            };
+            let selected = app.popup_scroll().get_line();
 
-            lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
+            lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
                 .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
             let options = Paragraph::new(lines)
                 .black()
                 .alignment(Alignment::Center)
-                .scroll((app.popup_scroll as u16, 0))
+                .scroll((app.popup_scroll().get_scroll() as u16, 0))
                 .wrap(Wrap { trim: false });
             f.render_widget(options, layout[0]);
+
+            app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 4);
         }
     }
 }
@@ -235,6 +234,8 @@ fn ordinal(n: u32) -> &'static str {
 fn show_spell_slots(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 75), f.size());
     clear_rect(f, chunk);
+
+    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
 
     let t = &app.player.spell_slots;
     let r = &app.player.spell_slots_remaining;
@@ -265,12 +266,9 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
             .collect()
     };
 
-    let selected = match app.selected {
-        Some(Selected::SpellSlots(idx)) => idx,
-        _ => 0,
-    };
+    let selected = app.popup_scroll().get_line();
 
-    lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
+    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
         .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
     let offset = lines.len() / 2;
@@ -287,10 +285,12 @@ fn show_spell_slots(f: &mut Frame, app: &mut App) {
     f.render_widget(p, chunk);
 }
 
-fn show_funds(f: &mut Frame, app: &App) {
+fn show_funds(f: &mut Frame, app: &mut App) {
     const LABELS: [&str; 4] = ["PP", "GP", "SP", "CP"];
     let chunk = get_popup_rect((35, 75), f.size());
     clear_rect(f, chunk);
+
+    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
 
     let mut lines: Vec<Line> = (0..4)
         .map(|i| {
@@ -303,12 +303,9 @@ fn show_funds(f: &mut Frame, app: &App) {
         })
         .collect();
 
-    let selected = match app.selected {
-        Some(Selected::Funds(idx)) => idx,
-        _ => 0,
-    };
+    let selected = app.popup_scroll().get_line();
 
-    lines[selected.saturating_sub(app.popup_scroll) as usize].spans[0]
+    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
         .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
     let offset = lines.len() / 2;
@@ -364,15 +361,15 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
     let chunk = get_popup_rect((35, 55), f.size());
     clear_rect(f, chunk);
 
-    app.popup_height = u32::from(chunk.height) - 3;
+    app.popup_scroll_mut().update_frame_height(chunk.height as u32 - 2);
 
     let mut lines: Vec<Line> = app
         .player
         .get_skills()
         .iter()
-        .skip(app.popup_scroll as usize)
-        .take(chunk.height as usize - 2)
         .enumerate()
+        .skip(app.popup_scroll().get_scroll() as usize)
+        .take(chunk.height as usize - 2)
         .map(|(i, skill)| {
             Line::from(
                 Span::from(format!("{}: {:+}", SKILL_NAMES[i], skill))
@@ -382,12 +379,9 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
         })
         .collect();
 
-    let selected = match app.selected {
-        Some(Selected::Proficiency(i)) => i,
-        _ => unreachable!(),
-    };
+    let selected = app.popup_scroll().get_line();
 
-    lines[selected.saturating_sub(app.popup_scroll) as usize]
+    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize]
         .patch_style(Style::new().on_black().yellow());
 
     let p = Paragraph::new(lines).alignment(Alignment::Left).block(
@@ -402,83 +396,113 @@ fn show_proficiencies(f: &mut Frame, app: &mut App) {
     f.render_widget(p, chunk);
 }
 
-/// Render all ui widgets using the data located in `app`.
-pub fn render(app: &mut App, f: &mut Frame) {
-    // Create layouts
-    let main_chunks = Layout::default()
+/// Get the player bar, info bar, and stat/tab chunk rects.
+fn main_layout(parent: Rect) -> (Rect, Rect, Rect) {
+    let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(3), Constraint::Min(1)])
-        .split(f.size());
+        .constraints(vec![
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Min(1),
+        ]).split(parent);
 
-    let stat_split = Layout::default()
+    (chunks[0], chunks[1], chunks[2])
+}
+
+/// Get the stat bar and tab chunk rects
+fn stat_tab_layout(parent: Rect) -> (Rect, Rect) {
+    let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![Constraint::Length(9), Constraint::Min(1)])
-        .split(main_chunks[1]);
+        .split(parent);
 
-    let stat_vertical_bound = Layout::default()
+    let stat_chunk = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![Constraint::Length(19), Constraint::Min(1)])
-        .split(stat_split[0]);
+        .split(chunks[0]);
 
-    let info_tab_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(3), Constraint::Min(1)])
-        .split(stat_split[1]);
+    (stat_chunk[0], chunks[1])
+}
+
+/// Get the player bar, info bar, stat block, and tab pane rects.
+fn layouts(viewport: Rect) -> (Rect, Rect, Rect, Rect) {
+    let (player, info, stat_tab) = main_layout(viewport);
+    let (stat, tab) = stat_tab_layout(stat_tab);
+    (player, info, stat, tab)
+}
+
+/// Get the height of the tab pane given the specified viewport height
+pub fn tab_pane_height(viewport_height: u16) -> u16 {
+    let (_, _, tab_chunk) = main_layout(Rect::new(0, 0, 1, viewport_height));
+    // Border + bottom bar = 3 margin
+    tab_chunk.height - 3
+}
+
+/// Draw all UI widgets that are always present.
+fn draw_static_widgets(app: &mut App, f: &mut Frame) {
+    // Create layouts
+    let (player_rect, info_rect, stat_rect, tab_rect) = layouts(f.size());
 
     // Render player bar
-    let top_bar = PlayerBar::new(&app.player).editing(app.editing).highlight(
-        if let Some(Selected::TopBarItem(i)) = app.selected {
-            Some(i as u8)
+    let player_bar = PlayerBar::new(&app.player).editing(app.editing).highlight(
+        if let Some(Selected::TopBarItem) = app.selected {
+            Some(app.index as u8)
         } else {
             None
         },
     );
-    f.render_widget(top_bar, main_chunks[0]);
+    f.render_widget(player_bar, player_rect);
 
     // Render stat block
     let stat_block = StatBlock::new(&app.player.stats)
         .editing(app.editing)
-        .highlight(if let Some(Selected::StatItem(i)) = app.selected {
-            Some(i as u8)
+        .highlight(if let Some(Selected::StatItem) = app.selected {
+            Some(app.index as u8)
         } else {
             None
         });
-    f.render_widget(stat_block, stat_vertical_bound[0]);
+    f.render_widget(stat_block, stat_rect);
 
     // Render player info bar
-    let info_block = InfoBar::new(&app.player).editing(app.editing).highlight(
-        if let Some(Selected::InfoItem(i)) = app.selected {
-            Some(i as u8)
+    let info_bar = InfoBar::new(&app.player).editing(app.editing).highlight(
+        if let Some(Selected::InfoItem) = app.selected {
+            Some(app.index as u8)
         } else {
             None
         },
     );
-    f.render_widget(info_block, info_tab_chunks[0]);
+    f.render_widget(info_bar, info_rect);
 
     // Render the tab panel
     let tab_block = TabPanel::new(&app.player, app.current_tab)
-        .scroll(app.vscroll as u16)
+        .scroll(app.tab_scroll().get_scroll() as u16)
         .editing(app.editing)
-        .highlight(if let Some(Selected::TabItem(i)) = app.selected {
-            Some(i as u16)
+        .highlight(if let Some(Selected::TabItem) = app.selected {
+            Some(app.tab_scroll().get_line() as u16)
         } else {
             None
         });
-    f.render_widget(tab_block, info_tab_chunks[1]);
+    f.render_widget(tab_block, tab_rect);
+
+}
+
+/// Render all ui widgets using the data located in `app`.
+pub fn render(app: &mut App, f: &mut Frame) {
+    draw_static_widgets(app, f);
 
     match app.selected {
         Some(
-            Selected::Completion(_, _)
+            Selected::Completion(_)
             | Selected::ItemLookup(_)
             | Selected::ClassLookup
-            | Selected::FreeLookupSelect(_)
-            | Selected::Load(_),
+            | Selected::FreeLookupSelect
+            | Selected::Load,
         ) => show_lookup(f, app),
         Some(Selected::Quitting) => show_quit_popup(f),
-        Some(Selected::SpellSlots(_)) => show_spell_slots(f, app),
-        Some(Selected::Funds(_)) => show_funds(f, app),
+        Some(Selected::SpellSlots) => show_spell_slots(f, app),
+        Some(Selected::Funds) => show_funds(f, app),
         Some(Selected::FreeLookup) => show_free_lookup(f, app),
-        Some(Selected::Proficiency(_)) => show_proficiencies(f, app),
+        Some(Selected::Proficiency) => show_proficiencies(f, app),
         _ => {}
     }
 }

@@ -1,23 +1,27 @@
-use std::{path::Path, rc::Rc};
+mod scroll_provider;
+
+use std::{path::PathBuf, rc::Rc};
 
 use crate::{
     lookup::{Lookup, LookupEntry},
     player::Player,
 };
-use color_eyre::eyre::{eyre, Result, WrapErr};
+use color_eyre::eyre::Result;
 use strum_macros::Display;
+
+use self::scroll_provider::ScrollProvider;
 
 /// An enum that represents a control as well as an index into that control's values, if it has any.
 #[derive(Clone, Copy)]
 pub enum Selected {
     /// An item in the top bar.
-    TopBarItem(u32),
+    TopBarItem,
     /// An item in the stat block.
-    StatItem(u32),
+    StatItem,
     /// An item in the player info bar.
-    InfoItem(u32),
+    InfoItem,
     /// A line in the tab panel.``
-    TabItem(u32),
+    TabItem,
     /// The quit menu is showing.
     Quitting,
     /// The lookup menu is showing.
@@ -30,19 +34,19 @@ pub enum Selected {
     ///
     /// This holds a reference to the currently selected item and the tab item that
     /// the completion frame originated from
-    Completion(u32, u32),
+    Completion(u32),
     /// The spell slots popup is showing.
-    SpellSlots(u32),
+    SpellSlots,
     /// The money popup is showing.
-    Funds(u32),
+    Funds,
     /// The free lookup menu is showing.
     FreeLookup,
     /// The free lookup select menu is showing.
-    FreeLookupSelect(u32),
+    FreeLookupSelect,
     /// The proficiency menu is showing
-    Proficiency(u32),
+    Proficiency,
     /// The load menu is showing
-    Load(u32),
+    Load,
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -88,30 +92,27 @@ pub struct App {
     pub should_quit: bool,
     /// Whether the user is currently editing a control.
     pub editing: bool,
-    /// The currently selected pane of the user interface.
-    pub selected: Option<Selected>,
-    /// The amount of lines to scroll the current tab pane by.
-    pub vscroll: u32,
-    /// The current height of the tab viewport, in lines.
-    pub viewport_height: u32,
     /// The currently selected tab.
     pub current_tab: Tab,
     /// The player path specified at startup, if it exists.
-    pub path: Option<String>,
-    /// The amount of lines to scroll the popup pane by.
-    pub popup_scroll: u32,
-    /// The height of the popup panel
-    pub popup_height: u32,
+    pub path: Option<PathBuf>,
     /// The most recent lookup result, if it exists.
     pub current_lookup: Option<LookupResult>,
     /// The current free lookup buffer
     pub lookup_buffer: String,
+    pub selected: Option<Selected>,
+    pub index: u32,
+    tab_scroll_provider: ScrollProvider,
+    popup_scroll_provider: ScrollProvider,
 }
 
 impl App {
     /// Create a new instance of the `App` struct. Currently aliases to `App::default()`.
     pub fn new() -> Self {
-        Self::default()
+        let mut app = Self::default();
+        app.popup_scroll_mut().set_max(1);
+        app.tab_scroll_mut().set_max(1);
+        app
     }
 
     /// Requests the application to exit by updating the `should_quit` value.
@@ -120,53 +121,55 @@ impl App {
     }
 
     /// Attempts to load the player at the given file path.
-    pub fn load_player(&mut self, path: &Path) -> Result<()> {
-        let data = std::fs::read(path).wrap_err_with(|| {
-            format!(
-                "failed to load player from file `{}`",
-                path.to_string_lossy()
-            )
-        })?;
-        self.player = serde_json::from_slice(data.as_slice()).wrap_err_with(|| {
-            format!(
-                "player file `{}` could not be loaded, it may be corrupt",
-                path.to_string_lossy()
-            )
-        })?;
-        self.path = Some(path.to_string_lossy().to_string());
+    /// 
+    /// The app will remember the load path for future saving.
+    pub fn load_player(&mut self, path: PathBuf) -> Result<()> {
+        self.player = Player::load(path.as_path())?;
+        self.path = Some(path);
+        let len = self.current_tab().len() as u32;
+        self.tab_scroll_mut().set_max(len);
         Ok(())
     }
 
     /// Saves the currently edited player.
     ///
-    /// The app will try to save to the file name specified in the
-    /// environment args. If no file was specified, it will create a
-    /// new file with the same name as the player.
+    /// Will either save to the current player path or,
+    /// if it doesn't exist, a new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
         let data = serde_json::to_string(&self.player)?;
-        let path = self
-            .path
-            .as_ref()
-            .unwrap_or(&format!("{}.player", self.player.name))
-            .to_string();
+        let path = match self.path.as_ref() {
+            Some(path) => path.to_owned(),
+            None => PathBuf::from(&format!("{}.player", self.player.name)),
+        };
+
         std::fs::write(path, data)?;
         Ok(())
     }
 
-    /// Update the app's viewport height cache.
-    ///
-    /// This method will recalculate the current tab scroll.
+    /// Update the app's internal viewport height.
+    /// 
+    /// This value is used in scroll calculations,
+    /// so calling this function may scroll the active pane.
     pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
-        // tab frame size
-        self.viewport_height = u32::from(height) - 9;
-
-        let len = self.current_tab().len() as u32;
-
-        if self.vscroll + self.viewport_height >= len {
-            self.vscroll = len.saturating_sub(1).saturating_sub(self.viewport_height);
-        }
-
+        // TODO: popup frame provider needs to be updated as well.
+        self.tab_scroll_provider.update_frame_height(crate::ui::tab_pane_height(height) as u32);
         Ok(())
+    }
+
+    pub fn tab_scroll(&self) -> &ScrollProvider {
+        &self.tab_scroll_provider
+    }
+
+    pub fn tab_scroll_mut(&mut self) -> &mut ScrollProvider {
+        &mut self.tab_scroll_provider
+    }
+
+    pub fn popup_scroll(&self) -> &ScrollProvider {
+        &self.popup_scroll_provider
+    }
+
+    pub fn popup_scroll_mut(&mut self) -> &mut ScrollProvider {
+        &mut self.popup_scroll_provider
     }
 
     /// Returns a reference to the data of the currently selected tab.
@@ -192,14 +195,7 @@ impl App {
     /// Switches the current tab and recalculates the current tab scroll.
     pub fn update_tab(&mut self, tab: Tab) -> Result<()> {
         self.current_tab = tab;
-
-        // Using update with zero will just recheck scroll bounds
-        if let Some(Selected::TabItem(_)) = self.selected {
-            self.update_item_scroll(0)?;
-        } else {
-            self.update_overview_scroll(0);
-        }
-
+        self.tab_scroll_provider.set_max(self.current_tab().len() as u32);
         Ok(())
     }
 
@@ -209,19 +205,19 @@ impl App {
     /// or at the first position if the current tab is empty.
     /// This method will also recalculate the current tab scroll.
     pub fn append_item_to_tab(&mut self) -> Result<()> {
-        let mut item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot append while a tab is not selected")),
-        } as usize;
+        let mut item = self.tab_scroll_provider.get_line() as usize;
 
-        if !self.current_tab().is_empty() {
+        let tab = self.current_tab_mut();
+
+        if !tab.is_empty() {
             item += 1;
         }
 
-        self.current_tab_mut().insert(item, String::from(" "));
-        self.selected = Some(Selected::TabItem(item as u32));
+        tab.insert(item, String::from(" "));
 
-        self.vscroll = App::calculate_scroll(self.vscroll, item as u32, self.viewport_height);
+        let len = tab.len() as u32;
+        self.tab_scroll_provider.set_max(len);
+        self.tab_scroll_provider.scroll_down(1);
         Ok(())
     }
 
@@ -231,15 +227,12 @@ impl App {
     /// or at the first position if the current tab is empty.
     /// This method will also recalculate the current tab scroll.
     pub fn insert_item_to_tab(&mut self) -> Result<()> {
-        let item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot insert while a tab is not selected")),
-        } as usize;
-        // The new item will be at the same index as the previously selected item, so
-        // no need to change the selection
-        self.current_tab_mut().insert(item, String::from(" "));
+        let item = self.tab_scroll_provider.get_line() as usize;
+        let tab = self.current_tab_mut();
+        tab.insert(item, String::from(" "));
 
-        self.vscroll = App::calculate_scroll(self.vscroll, item as u32, self.viewport_height);
+        let len = tab.len() as u32;
+        self.tab_scroll_provider.set_max(len);
         Ok(())
     }
 
@@ -249,171 +242,58 @@ impl App {
     /// to delete and will panic if the current tab is empty. It will
     /// also recalulate the current tab scroll.
     pub fn delete_item_from_tab(&mut self) -> Result<()> {
-        let item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot delete while a tab is not selected")),
-        } as usize;
+        let item = self.tab_scroll_provider.get_line() as usize;
 
         let tab = self.current_tab_mut();
         tab.remove(item);
 
-        let new_idx = item.saturating_sub(1) as u32;
-
-        if item >= tab.len() {
-            self.selected = Some(Selected::TabItem(new_idx));
-        }
-
-        self.vscroll = App::calculate_scroll(self.vscroll, new_idx, self.viewport_height);
-        Ok(())
-    }
-
-    /// Moves the current overview scroll value by the given amount of lines.
-    pub fn update_overview_scroll(&mut self, amount: i32) {
-        let len = self.current_tab().len() as u32;
-        if len == 0 {
-            self.vscroll = 0;
-            return;
-        }
-
-        let max = len.saturating_sub(self.viewport_height);
-
-        self.vscroll = std::cmp::min(self.vscroll.saturating_add_signed(amount), max);
-    }
-
-    /// Moves the current line scroll value and selected item by the given amount of lines.
-    ///
-    /// This method will throw an error if no tab is currently selected.
-    pub fn update_item_scroll(&mut self, amount: i32) -> Result<()> {
-        let item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return Err(eyre!("cannot scroll item while a tab is not selected")),
-        };
-
-        let len = self.current_tab().len() as u32;
-
-        if len == 0 {
-            self.vscroll = 0;
-            return Ok(());
-        }
-
-        let selected = std::cmp::min(item.saturating_add_signed(amount), len - 1);
-        self.selected = Some(Selected::TabItem(selected));
-
-        self.vscroll = App::calculate_scroll(self.vscroll, selected, self.viewport_height);
+        let len = tab.len() as u32;
+        self.tab_scroll_provider.set_max(len);
 
         Ok(())
-    }
-
-    /// Move the current popup scroll and selected item by the given amount.
-    pub fn update_popup_scroll(&mut self, amount: i32) -> Result<()> {
-        let mut selected = match self.selected {
-            Some(Selected::Completion(item, _)) => item,
-            Some(Selected::FreeLookupSelect(item)) => item,
-            Some(Selected::Load(item)) => item,
-            _ => return Err(eyre!("current selection does not allow popup scroll")),
-        };
-
-        let num_entries = match &self.current_lookup {
-            Some(LookupResult::Completion(v)) => v.len(),
-            Some(LookupResult::Files(v)) => v.len(),
-            Some(LookupResult::Invalid(_)) => return Ok(()),
-            _ => {
-                return Err(eyre!(
-                    "current lookup does not support line-by-line scrolling"
-                ))
-            }
-        } as u32;
-
-        selected = selected.saturating_add_signed(amount).min(num_entries - 1);
-
-        self.selected = match self.selected {
-            Some(Selected::Completion(_, tab_item)) => {
-                Some(Selected::Completion(selected, tab_item))
-            }
-            Some(Selected::FreeLookupSelect(_)) => Some(Selected::FreeLookupSelect(selected)),
-            Some(Selected::Load(_)) => Some(Selected::Load(selected)),
-            _ => unreachable!(),
-        };
-
-        self.popup_scroll = App::calculate_scroll(self.popup_scroll, selected, self.popup_height);
-
-        Ok(())
-    }
-
-    /// Move the current popup overview scroll by the given amount.
-    pub fn update_popup_overview_scroll(&mut self, amount: i32) {
-        self.popup_scroll = self.popup_scroll.saturating_add_signed(amount);
-    }
-
-    /// Calculate the correct scroll value given the current scroll, selection, and frame height.
-    pub fn calculate_scroll(scroll: u32, selected: u32, height: u32) -> u32 {
-        if selected < scroll {
-            // If the current line is above the viewport, scroll up to it
-            selected
-        } else if selected >= scroll + height {
-            // If the current line is below the viewport, scroll down to it
-            selected - height + 1
-        } else {
-            scroll
-        }
     }
 
     /// Uses the current selected tab item to lookup a reference entry.
     ///
     /// This method does not perform any kind of caching.
     pub fn lookup_current_selection(&mut self, lookup: &Lookup) {
-        use Tab::{Inventory, Notes, Spells};
-        let item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return,
-        };
+        let item = self.tab_scroll_provider.get_line();
 
-        let tab = match self.current_tab {
-            Notes => &self.player.notes,
-            Inventory => &self.player.inventory,
-            Spells => &self.player.spells,
-        };
-
-        let text = tab[item as usize].trim().to_ascii_lowercase();
-        let lookup = lookup.get_entry(&text);
-
-        // Probably shouldn't clone but the lifetimes were too confusing :(
-        self.current_lookup = match lookup {
-            Some(entry) => Some(LookupResult::Success(entry.clone())),
-            None => Some(LookupResult::Invalid(text.clone())),
-        };
-
+        let text = &self.current_tab()[item as usize].clone();
+        self.lookup_text(lookup, text);
         self.selected = Some(Selected::ItemLookup(item));
-        self.popup_scroll = 0;
     }
 
     pub fn lookup_class(&mut self, lookup: &Lookup) {
-        let text = self.player.class.to_string().to_lowercase();
-        let lookup = lookup.get_entry(&text);
-
-        // Probably shouldn't clone but the lifetimes were too confusing :(
-        self.current_lookup = match lookup {
-            Some(entry) => Some(LookupResult::Success(entry.clone())),
-            None => Some(LookupResult::Invalid(text.clone())),
-        };
-
+        let text = self.player.class.to_string();
+        self.lookup_text(lookup, &text);
         self.selected = Some(Selected::ClassLookup);
-        self.popup_scroll = 0;
     }
 
     /// Lookup the player's current race.
     pub fn lookup_race(&mut self, lookup: &Lookup) {
         let text = self.player.race.to_lookup_string();
-        let lookup = lookup.get_entry(text);
+        self.lookup_text(lookup, text);
+        self.selected = Some(Selected::ClassLookup);
+    }
+
+    /// Try to lookup the given text
+    fn lookup_text(&mut self, lookup: &Lookup, text: &str) {
+        let lookup = lookup.get_entry(&text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
         self.current_lookup = match lookup {
-            Some(entry) => Some(LookupResult::Success(entry.clone())),
-            None => Some(LookupResult::Invalid(String::from(text))),
+            Some(entry) => {
+                self.popup_scroll_provider.clear_max();
+                Some(LookupResult::Success(entry.clone()))
+            }
+            None => {
+                self.popup_scroll_provider.set_max(1);
+                Some(LookupResult::Invalid(text.to_owned()))
+            }
         };
 
-        self.selected = Some(Selected::ClassLookup);
-        self.popup_scroll = 0;
+        self.popup_scroll_provider.reset();
     }
 
     /// Lookup all player files in the cwd
@@ -427,50 +307,42 @@ impl App {
             .map(|f| f.to_str().unwrap_or(&f.to_string_lossy()).to_owned())
             .collect();
 
-        self.selected = Some(Selected::Load(0));
+        self.selected = Some(Selected::Load);
         self.current_lookup = Some(LookupResult::Files(names));
+        self.popup_scroll_provider.reset();
 
         Ok(())
     }
 
     /// Get all completions for the currently selected tab item
     pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
-        use Tab::{Inventory, Notes, Spells};
-        let item = match self.selected {
-            Some(Selected::TabItem(item)) => item,
-            _ => return Ok(()),
-        };
+        let item = self.tab_scroll_provider.get_line();
+        let tab = self.current_tab();
 
-        let tab = match self.current_tab {
-            Notes => &self.player.notes,
-            Inventory => &self.player.inventory,
-            Spells => &self.player.spells,
-        };
-
-        self.current_lookup = Some(self.get_completion(&tab[item as usize], lookup));
+        let result = self.get_completion(&tab[item as usize].clone(), lookup);
 
         self.selected = Some(Selected::ItemLookup(item));
-        self.popup_scroll = 0;
+        self.current_lookup = Some(result);
+        self.popup_scroll_provider.reset();
         Ok(())
     }
 
-    pub fn get_completion(&self, text: &str, lookup: &Lookup) -> LookupResult {
+    pub fn get_completion(&mut self, text: &str, lookup: &Lookup) -> LookupResult {
         let text = text.trim().to_ascii_lowercase();
         let lookup = lookup.get_completions(&text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
         if !lookup.is_empty() {
+            self.popup_scroll_provider.set_max(lookup.len() as u32);
             LookupResult::Completion(lookup)
         } else {
+            self.popup_scroll_provider.set_max(1);
             LookupResult::Invalid(format!("{}", text.clone()))
         }
     }
 
     pub fn finish_completion(&mut self) {
-        let (comp_item, tab_item) = match self.selected {
-            Some(Selected::Completion(c, i)) => (c, i),
-            _ => unreachable!(),
-        };
+        let comp_item = self.popup_scroll_provider.get_line();
 
         let completion = match self.current_lookup {
             Some(LookupResult::Completion(ref vec)) => vec,
@@ -479,6 +351,11 @@ impl App {
         }[comp_item as usize]
             .name
             .clone(); // If there's a way to do this without a clone I don't know it
+
+        let tab_item = match self.selected {
+            Some(Selected::Completion(item)) => item,
+            _ => panic!("attempt to finish completion while not in completion mode"),
+        };
 
         let current = &mut self.current_tab_mut()[tab_item as usize];
         current.push_str(&completion[current.trim().len()..]);
@@ -491,15 +368,15 @@ impl App {
             | Some(
                 Selected::Quitting
                 | Selected::ItemLookup(_)
-                | Selected::Completion(_, _)
+                | Selected::Completion(_)
                 | Selected::ClassLookup
-                | Selected::SpellSlots(_)
-                | Selected::Funds(_)
-                | Selected::FreeLookupSelect(_)
-                | Selected::Proficiency(_)
-                | Selected::Load(_),
+                | Selected::SpellSlots
+                | Selected::Funds
+                | Selected::FreeLookupSelect
+                | Selected::Proficiency
+                | Selected::Load,
             ) => None,
-            Some(Selected::TopBarItem(idx)) => match idx {
+            Some(Selected::TopBarItem) => match self.index {
                 0 => Some(ControlType::TextInput(&mut self.player.name)),
                 1 => Some(ControlType::CycleFn(
                     |app| app.player.update_race(app.player.race.get_prev()),
@@ -530,12 +407,12 @@ impl App {
                 )),
                 _ => unreachable!(),
             },
-            Some(Selected::StatItem(idx)) => Some(ControlType::CycleRecalc(
-                &mut self.player.stats[idx as usize],
+            Some(Selected::StatItem) => Some(ControlType::CycleRecalc(
+                &mut self.player.stats[self.index as usize],
                 1,
                 30,
             )),
-            Some(Selected::InfoItem(idx)) => match idx {
+            Some(Selected::InfoItem) => match self.index {
                 0 => Some(ControlType::Cycle(
                     &mut self.player.hp,
                     0,
@@ -564,24 +441,12 @@ impl App {
                 )),
                 _ => unreachable!(),
             },
-            Some(Selected::TabItem(idx)) => Some(ControlType::TextInput(match self.current_tab {
-                Tab::Notes => &mut self.player.notes[idx as usize],
-                Tab::Inventory => &mut self.player.inventory[idx as usize],
-                Tab::Spells => &mut self.player.spells[idx as usize],
+            Some(Selected::TabItem) => Some(ControlType::TextInput(match self.current_tab {
+                Tab::Notes => &mut self.player.notes[self.tab_scroll_provider.get_line() as usize],
+                Tab::Inventory => &mut self.player.inventory[self.tab_scroll_provider.get_line() as usize],
+                Tab::Spells => &mut self.player.spells[self.tab_scroll_provider.get_line() as usize],
             })),
             Some(Selected::FreeLookup) => Some(ControlType::TextInput(&mut self.lookup_buffer)),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::App;
-    #[test]
-    pub fn app_scroll_test() {
-        assert_eq!(App::calculate_scroll(0, 0, 40), 0);
-        assert_eq!(App::calculate_scroll(0, 40, 40), 1);
-        assert_eq!(App::calculate_scroll(1, 1, 40), 1);
-        assert_eq!(App::calculate_scroll(1, 0, 40), 0);
     }
 }

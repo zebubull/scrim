@@ -84,3 +84,45 @@ impl<'a> Iterator for StatsIter<'a> {
         val
     }
 }
+
+impl std::ops::Add<Stats> for &Stats {
+    type Output = Stats;
+
+    fn add(self, rhs: Stats) -> Self::Output {
+        Stats {
+            strength: self.strength + rhs.strength,
+            dexterity: self.dexterity + rhs.dexterity,
+            constitution: self.constitution + rhs.constitution,
+            intelligence: self.intelligence + rhs.intelligence,
+            wisdom: self.wisdom + rhs.wisdom,
+            charisma: self.charisma + rhs.charisma,
+        }
+    }
+}
+
+impl std::ops::Sub<Stats> for &Stats {
+    type Output = Stats;
+
+    fn sub(self, rhs: Stats) -> Self::Output {
+        Stats {
+            strength: self.strength - rhs.strength,
+            dexterity: self.dexterity - rhs.dexterity,
+            constitution: self.constitution - rhs.constitution,
+            intelligence: self.intelligence - rhs.intelligence,
+            wisdom: self.wisdom - rhs.wisdom,
+            charisma: self.charisma - rhs.charisma,
+        }
+    }
+}
+
+impl std::ops::AddAssign<Stats> for Stats {
+    fn add_assign(&mut self, rhs: Stats) {
+        *self = &*self + rhs;
+    }
+}
+
+impl std::ops::SubAssign<Stats> for Stats {
+    fn sub_assign(&mut self, rhs: Stats) {
+        *self = &*self - rhs;
+    }
+}

@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use ratatui::{prelude::*, widgets::{Widget, Paragraph, Block, Wrap}};
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Paragraph, Widget, Wrap},
+};
 
 /// A widget that can render a vector of elements
 pub struct VecView<'a, T> {
@@ -14,7 +17,10 @@ pub struct VecView<'a, T> {
     alignment: Alignment,
 }
 
-impl <'a, T> VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
+impl<'a, T> VecView<'a, T>
+where
+    &'a T: Into<Cow<'a, str>>,
+{
     /// Set the foreground color of the widget
     pub fn fg(mut self, color: Color) -> Self {
         self.fg = color;
@@ -46,7 +52,7 @@ impl <'a, T> VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
     }
 
     /// Wrap the widget in a block.
-    /// 
+    ///
     /// Block padding should not be used.
     pub fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
@@ -60,7 +66,10 @@ impl <'a, T> VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
     }
 }
 
-impl<'a, T> Widget for VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
+impl<'a, T> Widget for VecView<'a, T>
+where
+    &'a T: Into<Cow<'a, str>>,
+{
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         // This does not account for block padding because it is private
         let content_height = if let Some(_) = self.block {
@@ -69,19 +78,20 @@ impl<'a, T> Widget for VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
             area.height
         };
 
-        let mut lines: Vec<Line> = self.data.iter()
-        .skip(self.scroll as usize)
-        .take(content_height as usize)
-        .map(|s| {
-            Line::from(Span::styled(s, Style::default().fg(self.fg).bg(self.bg)))
-        }).collect();
+        let mut lines: Vec<Line> = self
+            .data
+            .iter()
+            .skip(self.scroll as usize)
+            .take(content_height as usize)
+            .map(|s| Line::from(Span::styled(s, Style::default().fg(self.fg).bg(self.bg))))
+            .collect();
 
         if let Some((line, color)) = self.highlight {
-            lines[line.saturating_sub(self.scroll) as usize].spans[0].patch_style(Style::default().fg(self.bg).bg(color));
+            lines[line.saturating_sub(self.scroll) as usize].spans[0]
+                .patch_style(Style::default().fg(self.bg).bg(color));
         }
 
-        let mut p = Paragraph::new(lines)
-            .alignment(self.alignment);
+        let mut p = Paragraph::new(lines).alignment(self.alignment);
 
         if self.wrap {
             p = p.wrap(Wrap { trim: false });
@@ -95,7 +105,10 @@ impl<'a, T> Widget for VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
     }
 }
 
-impl<'a, T> From<&'a Vec<T>> for VecView<'a, T> where &'a T: Into<Cow<'a, str>> {
+impl<'a, T> From<&'a Vec<T>> for VecView<'a, T>
+where
+    &'a T: Into<Cow<'a, str>>,
+{
     fn from(value: &'a Vec<T>) -> Self {
         Self {
             data: value,

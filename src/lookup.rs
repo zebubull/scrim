@@ -30,7 +30,7 @@ impl Lookup {
     /// # Example
     /// ```no_run
     /// use scrim::lookup::Lookup;
-    /// 
+    ///
     /// let mut lookup = Lookup::new("data/lookups".into());
     /// lookup.load().expect("failed to load lookup");
     /// lookup.get_entry("apple");
@@ -93,15 +93,16 @@ impl Lookup {
 
     /// Get the lookup entry with the current name, if it exists.
     pub fn get_entry(&self, name: &str) -> Option<&Rc<LookupEntry>> {
-        self.entries.get(name)
+        self.entries.get(&name.to_lowercase())
     }
 
     /// Search the lookup table for all possible completions for the given text
     pub fn get_completions(&self, text: &str) -> Vec<Rc<LookupEntry>> {
+        let text = text.trim_start().to_lowercase();
         self.entries
             .iter()
             .filter_map(|(k, v)| {
-                if k.starts_with(text) {
+                if k.starts_with(&text) {
                     return Some(v.clone());
                 }
                 None

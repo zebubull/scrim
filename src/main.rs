@@ -1,7 +1,7 @@
 use std::env::args;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use scrim::app::App;
+use scrim::core::App;
 use scrim::event::{Event, EventHandler};
 use scrim::lookup::Lookup;
 use scrim::tui::Tui;
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
 
     // Load player data
     if path.is_some() {
-        let path = Path::new(path.as_ref().unwrap());
+        let path = PathBuf::from(path.as_ref().unwrap());
         if path.exists() {
             app.load_player(path)?;
         }
