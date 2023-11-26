@@ -18,8 +18,6 @@ pub struct VecView<'a, T> {
 }
 
 impl<'a, T> VecView<'a, T>
-where
-    &'a T: Into<Cow<'a, str>>,
 {
     /// Set the foreground color of the widget
     pub fn fg(mut self, color: Color) -> Self {
@@ -95,14 +93,10 @@ where
                 .patch_style(Style::default().fg(self.bg).bg(color));
         }
 
-        let mut p = Paragraph::new(lines).alignment(self.alignment);
+        let mut p = Paragraph::new(lines).alignment(self.alignment).block(self.block.unwrap_or_default());
 
         if self.wrap {
             p = p.wrap(Wrap { trim: false });
-        }
-
-        if let Some(block) = self.block {
-            p = p.block(block);
         }
 
         p.render(area, buf);

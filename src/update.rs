@@ -274,7 +274,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     if !options.is_empty() {
                         app.current_lookup = Some(LookupResult::Success(
                             options[app.popup_scroll().get_line() as usize].clone(),
-                        ))
+                        ));
+                        app.popup_scroll_mut().clear_max();
                     } else {
                         app.selected = None;
                         app.current_lookup = None;

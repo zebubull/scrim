@@ -1,58 +1,25 @@
 use ratatui::{
     layout::{Alignment, Rect},
     prelude::{Constraint, Direction, Frame, Layout},
-    style::{Color, Style, Stylize},
-    text::{Line, Span},
-    widgets::{Block, Borders, Padding, Paragraph, Wrap},
+    style::Color,
+    widgets::{Block, Borders, Padding},
 };
 
 use crate::{
     core::{App, LookupResult, Selected},
     player::{class::Class, skills::SKILL_NAMES, spells::SpellSlots},
     widgets::{
+        PopupSize,
         info_bar::InfoBar,
         player_bar::PlayerBar,
         stat_block::StatBlock,
         tab_panel::TabPanel,
-        vec_popup::{PopupSize, VecPopup},
+        vec_popup::VecPopup, simple_popup::SimplePopup,
     },
 };
 
-/// Get a rectangle for a popup with the given width and height percentages
-fn get_popup_rect((width, height): (u16, u16), parent: Rect) -> Rect {
-    let hpart = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(vec![
-            Constraint::Percentage((100 - width) / 2),
-            Constraint::Percentage(width),
-            Constraint::Percentage((100 - width) / 2),
-        ])
-        .split(parent);
-
-    let vpart = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(vec![
-            Constraint::Percentage((100 - height) / 2),
-            Constraint::Percentage(height),
-            Constraint::Percentage((100 - height) / 2),
-        ])
-        .split(hpart[1]);
-
-    vpart[1]
-}
-
-/// Clear the given rectangle by writing a paragraph of spaces.
-///
-/// There is probably a better way to do this but I have not figured
-/// it out yet so this will do for now.
-fn clear_rect(f: &mut Frame, rect: Rect) {
-    let s = " ".repeat(rect.width as usize);
-    let lines: Vec<Line> = (0..rect.height).map(|_| Line::from(s.clone())).collect();
-    f.render_widget(Paragraph::new(lines), rect);
-}
-
 /// Show the quit confirmation menu
-fn show_quit_popup(f: &mut Frame) {
+fn show_quit_popup(app: &mut App, f: &mut Frame) {
     let data =  [
         String::from("y - yes (save)"),
         String::from("s - yes (don't save)"),
@@ -61,7 +28,7 @@ fn show_quit_popup(f: &mut Frame) {
 
     let popup = VecPopup::new(
         &data[..],
-        PopupSize::Absolute(22, 5),
+        PopupSize::Absolute(24, 7),
     )
     .fg(Color::Black)
     .bg(Color::Yellow)
@@ -69,10 +36,12 @@ fn show_quit_popup(f: &mut Frame) {
         Block::default()
             .borders(Borders::ALL)
             .title("Really Quit?")
-            .title_alignment(Alignment::Center),
+            .title_alignment(Alignment::Center)
+            .padding(Padding::uniform(1)),
     )
     .alignment(Alignment::Left);
 
+    app.popup_scroll_mut().update_frame_height(7);
     f.render_widget(popup, f.size());
 }
 
@@ -80,153 +49,77 @@ fn show_quit_popup(f: &mut Frame) {
 ///
 /// This could probably be moved to its own widget but I haven't done that yet.
 fn show_lookup(f: &mut Frame, app: &mut App) {
-    let chunk = get_popup_rect((55, 65), f.size());
-    clear_rect(f, chunk);
-
-    let block = Block::default()
-        .title(if let Some(LookupResult::Files(_)) = app.current_lookup {
-            "File Select"
-        } else {
-            "Reference Lookup"
-        })
-        .title_alignment(Alignment::Center)
-        .borders(Borders::ALL)
-        .on_yellow()
-        .black();
-    f.render_widget(block, chunk);
-
     let lookup = app.current_lookup.as_ref().unwrap();
 
-    match lookup {
+    // Store the frame height for use after the lookup reference is dropped
+    let frame_height = match lookup {
         LookupResult::Invalid(search) => {
-            let p = Paragraph::new(format!("No entry found for '{search}'"))
-                .black()
-                .wrap(Wrap { trim: false });
-            f.render_widget(
-                p,
-                Layout::default()
-                    .margin(1)
-                    .constraints(vec![Constraint::Percentage(100)])
-                    .split(chunk)[0],
-            );
-            app.popup_scroll_mut()
-                .update_frame_height(chunk.height as u32 - 2);
-        }
+            let text = format!("No results found for '{}'", search);
+            let popup = SimplePopup::new(&text, PopupSize::Percentage(65, 25))
+                .bg(Color::Yellow)
+                .fg(Color::Black)
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                    .title("Lookup Failed")
+                    .title_alignment(Alignment::Center));
+
+            let frame_height = popup.rect(f.size()).height as u32 - 2; // Border
+            f.render_widget(popup, f.size());
+            frame_height
+        },
         LookupResult::Success(entry) => {
-            let entry = entry.clone();
-            let render_short = !entry.description_short.is_empty();
-            let vchunks = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(1)
-                .constraints(if render_short {
-                    vec![
-                        Constraint::Length(1),
-                        Constraint::Length(2),
-                        Constraint::Length(1),
-                        Constraint::Min(1),
-                    ]
-                } else {
-                    vec![
-                        Constraint::Length(1),
-                        Constraint::Length(1),
-                        Constraint::Min(1),
-                    ]
-                })
-                .split(chunk);
+            let entry = entry.as_ref();
+            let text = format!("{}\n{}", entry.description_short, entry.description);
+            let popup = SimplePopup::new(&text, PopupSize::Percentage(55, 65))
+                .fg(Color::Black)
+                .bg(Color::Yellow)
+                .wrap()
+                .scroll_to(app.popup_scroll().get_scroll())
+                .block(Block::default()
+                    .title(entry.name.clone())
+                    .title_alignment(Alignment::Center)
+                    .borders(Borders::ALL));
 
-            app.popup_scroll_mut().update_frame_height(if render_short {
-                u32::from(chunk.height) - 6
-            } else {
-                u32::from(chunk.height) - 4
-            });
-
-            let title = Paragraph::new(entry.name.to_string())
-                .black()
-                .bold()
-                .alignment(Alignment::Center);
-            f.render_widget(title, vchunks[0]);
-
-            if render_short {
-                let short = Paragraph::new(entry.description_short.to_string())
-                    .black()
-                    .alignment(Alignment::Left);
-                f.render_widget(short, vchunks[1]);
-            }
-
-            let desc = Paragraph::new(entry.description.to_string())
-                .black()
-                .alignment(Alignment::Left)
-                .scroll((app.popup_scroll().get_scroll() as u16, 0))
-                .wrap(Wrap { trim: false });
-            f.render_widget(desc, vchunks[if render_short { 3 } else { 2 }]);
+            let frame_height = popup.rect(f.size()).height as u32 - 2; // Border
+            f.render_widget(popup, f.size());
+            frame_height
         }
         LookupResult::Completion(entries) => {
-            let vchunks = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(1)
-                .constraints(vec![
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                    Constraint::Min(1),
-                ])
-                .split(chunk);
+            let lines: Vec<String> = entries.iter().map(|e| e.name.to_owned()).collect();
+            let popup = VecPopup::new(&lines, PopupSize::Percentage(55, 75))
+                .bg(Color::Yellow)
+                .fg(Color::Black)
+                .scroll_to(app.popup_scroll().get_scroll())
+                .highlight(app.popup_scroll().get_line(), Color::Black)
+                .block(Block::default()
+                    .title(format!("{} results found", entries.len()))
+                    .title_alignment(Alignment::Center)
+                    .borders(Borders::ALL)
+                    .padding(Padding::vertical(1)));
 
-            let title = Paragraph::new(format!("{} results founds...", entries.len()))
-                .black()
-                .bold()
-                .alignment(Alignment::Center);
-            f.render_widget(title, vchunks[0]);
-
-            let mut lines: Vec<Line> = entries
-                .iter()
-                .skip(app.popup_scroll().get_scroll() as usize)
-                .take(vchunks[2].height as usize)
-                .map(|e| Line::from(Span::from(&e.name).on_yellow()))
-                .collect();
-
-            let selected = app.popup_scroll().get_line();
-
-            lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
-                .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
-
-            let options = Paragraph::new(lines)
-                .black()
-                .alignment(Alignment::Center)
-                .wrap(Wrap { trim: false });
-            f.render_widget(options, vchunks[2]);
-
-            app.popup_scroll_mut()
-                .update_frame_height(vchunks[2].height as u32);
+            let frame_height = popup.rect(f.size()).height as u32 - 4; // Border + padding
+            f.render_widget(popup, f.size());
+            frame_height
         }
-        LookupResult::Files(entries) => {
-            let mut lines: Vec<Line> = entries
-                .iter()
-                .skip(app.popup_scroll().get_scroll() as usize)
-                .take(chunk.height as usize - 4)
-                .map(|e| Line::from(Span::from(e).on_yellow()))
-                .collect();
+        LookupResult::Files(files) => {
+            let popup = VecPopup::new(files, PopupSize::Percentage(55, 75))
+                .bg(Color::Yellow)
+                .fg(Color::Black)
+                .highlight(app.popup_scroll().get_line(), Color::Black)
+                .scroll_to(app.popup_scroll().get_scroll())
+                .block(Block::default()
+                    .title("Load Player")
+                    .title_alignment(Alignment::Center)
+                    .borders(Borders::ALL)
+                    .padding(Padding::vertical(1)));
 
-            let layout = Layout::default()
-                .constraints(vec![Constraint::Min(1)])
-                .margin(1)
-                .split(chunk);
-
-            let selected = app.popup_scroll().get_line();
-
-            lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
-                .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
-
-            let options = Paragraph::new(lines)
-                .black()
-                .alignment(Alignment::Center)
-                .scroll((app.popup_scroll().get_scroll() as u16, 0))
-                .wrap(Wrap { trim: false });
-            f.render_widget(options, layout[0]);
-
-            app.popup_scroll_mut()
-                .update_frame_height(chunk.height as u32 - 4);
+            let frame_height = popup.rect(f.size()).height as u32 - 4; // Border + padding
+            f.render_widget(popup, f.size());
+            frame_height
         }
-    }
+    };
+
+    app.popup_scroll_mut().update_frame_height(frame_height);
 }
 
 /// Get the ordinal suffix corresponding to the given digit
@@ -242,172 +135,104 @@ fn ordinal(n: u32) -> &'static str {
 /// Show the player's spell slot menu
 ///
 /// This could probably be moved to its own widget but I'm lazy :p
-fn show_spell_slots(f: &mut Frame, app: &mut App) {
-    let chunk = get_popup_rect((35, 75), f.size());
-    clear_rect(f, chunk);
-
-    app.popup_scroll_mut()
-        .update_frame_height(chunk.height as u32 - 2);
-
+fn show_spell_slots(app: &mut App, f: &mut Frame) {
     let t = &app.player.spell_slots;
     let r = &app.player.spell_slots_remaining;
 
-    let mut lines = if let Class::Warlock = app.player.class {
+    let lines = if let Class::Warlock = app.player.class {
         let level = SpellSlots::warlock_slot_level(app.player.level);
-        vec![Line::from(
+        vec![
             format!("{}{}: {} / {}", level, ordinal(level), t.warlock, r.warlock)
-                .black()
-                .on_yellow(),
-        )]
+        ]
     } else {
         (0..9)
             .map(|i| {
-                let total = t[i];
-                Line::from(
-                    Span::from(format!(
-                        "{}{}: {} / {}",
-                        i + 1,
-                        ordinal(i as u32 + 1),
-                        r[i],
-                        total
-                    ))
-                    .on_yellow()
-                    .black(),
+                format!(
+                    "{}{}: {} / {}",
+                    i + 1,
+                    ordinal(i as u32 + 1),
+                    r[i],
+                    t[i]
                 )
             })
             .collect()
     };
 
-    let selected = app.popup_scroll().get_line();
-
-    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
-        .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
-
-    let offset = lines.len() / 2;
-    let p = Paragraph::new(lines).alignment(Alignment::Center).block(
-        Block::default()
+    let popup = VecPopup::new(&lines, PopupSize::Absolute(13, 11))
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .alignment(Alignment::Center)
+        .block(Block::default()
             .title("Spell Slots")
             .title_alignment(Alignment::Center)
-            .borders(Borders::ALL)
-            .on_yellow()
-            .black()
-            .padding(Padding::new(0, 0, chunk.height / 2 - offset as u16, 0)),
-    );
+            .borders(Borders::ALL));
 
-    f.render_widget(p, chunk);
+    app.popup_scroll_mut().update_frame_height(11);
+
+    f.render_widget(popup, f.size());
 }
 
-fn show_funds(f: &mut Frame, app: &mut App) {
+fn show_funds(app: &mut App, f: &mut Frame) {
     const LABELS: [&str; 4] = ["PP", "GP", "SP", "CP"];
-    let chunk = get_popup_rect((35, 75), f.size());
-    clear_rect(f, chunk);
-
-    app.popup_scroll_mut()
-        .update_frame_height(chunk.height as u32 - 2);
-
-    let mut lines: Vec<Line> = (0..4)
+    let lines: Vec<String> = (0..4)
         .map(|i| {
             let fundage = app.player.funds.nth(i);
-            Line::from(
-                Span::from(format!("{}: {}", LABELS[i as usize], fundage,))
-                    .on_yellow()
-                    .black(),
-            )
+                format!("{}: {}", LABELS[i as usize], fundage)
         })
         .collect();
 
-    let selected = app.popup_scroll().get_line();
 
-    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize].spans[0]
-        .patch_style(Style::default().bg(Color::Black).fg(Color::Yellow));
-
-    let offset = lines.len() / 2;
-    let p = Paragraph::new(lines).alignment(Alignment::Center).block(
-        Block::default()
+    let popup = VecPopup::new(&lines, PopupSize::Absolute(12, 8))
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .alignment(Alignment::Center)
+        .block(Block::default()
             .title("Funds")
             .title_alignment(Alignment::Center)
             .borders(Borders::ALL)
-            .on_yellow()
-            .black()
-            .padding(Padding::new(0, 0, chunk.height / 2 - offset as u16, 0)),
-    );
+            .padding(Padding::vertical(1)));
 
-    f.render_widget(p, chunk);
+    app.popup_scroll_mut().update_frame_height(6);
+    f.render_widget(popup, f.size());
 }
 
-fn show_free_lookup(f: &mut Frame, app: &mut App) {
-    let vchunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(vec![
-            Constraint::Length(8),
-            Constraint::Length(3),
-            Constraint::Min(1),
-        ])
-        .split(f.size());
+fn show_free_lookup_prompt(app: &mut App, f: &mut Frame) {
+    let popup = SimplePopup::new(&app.lookup_buffer, PopupSize::Absolute(f.size().width-10, 3))
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .block(Block::default()
+            .title("Lookup")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL));
 
-    let hchunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(vec![
-            Constraint::Length(10),
-            Constraint::Min(1),
-            Constraint::Length(1),
-        ])
-        .split(vchunks[1]);
-
-    clear_rect(f, hchunks[1]);
-
-    let p = Paragraph::new(app.lookup_buffer.clone())
-        .alignment(Alignment::Left)
-        .block(
-            Block::default()
-                .title("Lookup")
-                .title_alignment(Alignment::Center)
-                .borders(Borders::ALL)
-                .on_yellow()
-                .black(),
-        );
-
-    f.render_widget(p, hchunks[1]);
+    f.render_widget(popup, f.size());
 }
 
-fn show_proficiencies(f: &mut Frame, app: &mut App) {
-    let chunk = get_popup_rect((35, 55), f.size());
-    clear_rect(f, chunk);
-
-    app.popup_scroll_mut()
-        .update_frame_height(chunk.height as u32 - 2);
-
-    let mut lines: Vec<Line> = app
+fn show_proficiencies(app: &mut App, f: &mut Frame) {
+    let lines: Vec<String> = app
         .player
         .get_skills()
         .iter()
         .enumerate()
-        .skip(app.popup_scroll().get_scroll() as usize)
-        .take(chunk.height as usize - 2)
         .map(|(i, skill)| {
-            Line::from(
-                Span::from(format!("{}: {:+}", SKILL_NAMES[i], skill))
-                    .on_yellow()
-                    .black(),
-            )
+                format!("{}: {:+}", SKILL_NAMES[i], skill)
         })
         .collect();
-
-    let selected = app.popup_scroll().get_line();
-
-    lines[selected.saturating_sub(app.popup_scroll().get_scroll()) as usize]
-        .patch_style(Style::new().on_black().yellow());
-
-    let p = Paragraph::new(lines).alignment(Alignment::Left).block(
-        Block::default()
+    
+    let popup = VecPopup::new(&lines, PopupSize::Percentage(35, 55))
+        .bg(Color::Yellow)
+        .fg(Color::Black)
+        .scroll_to(app.popup_scroll().get_scroll())
+        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .block(Block::default()
             .title("Proficiencies")
             .title_alignment(Alignment::Center)
-            .borders(Borders::ALL)
-            .on_yellow()
-            .black(),
-    );
+            .borders(Borders::ALL));
 
-    f.render_widget(p, chunk);
+    app.popup_scroll_mut().update_frame_height(popup.rect(f.size()).height as u32 - 2);
+    f.render_widget(popup, f.size());
 }
 
 /// Get the player bar, info bar, and stat/tab chunk rects.
@@ -512,11 +337,11 @@ pub fn render(app: &mut App, f: &mut Frame) {
             | Selected::FreeLookupSelect
             | Selected::Load,
         ) => show_lookup(f, app),
-        Some(Selected::Quitting) => show_quit_popup(f),
-        Some(Selected::SpellSlots) => show_spell_slots(f, app),
-        Some(Selected::Funds) => show_funds(f, app),
-        Some(Selected::FreeLookup) => show_free_lookup(f, app),
-        Some(Selected::Proficiency) => show_proficiencies(f, app),
+        Some(Selected::Quitting) => show_quit_popup(app, f),
+        Some(Selected::SpellSlots) => show_spell_slots(app, f),
+        Some(Selected::Funds) => show_funds(app, f),
+        Some(Selected::FreeLookup) => show_free_lookup_prompt(app, f),
+        Some(Selected::Proficiency) => show_proficiencies(app, f),
         _ => {}
     }
 }

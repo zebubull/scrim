@@ -1,58 +1,59 @@
-use std::borrow::Cow;
-
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::Color,
-    widgets::{Block, Widget},
+    style::{Color, Style},
+    widgets::{Block, Widget, Paragraph, Wrap},
 };
 
-use super::{vec_view::VecView, PopupSize};
+use super::PopupSize;
 
-/// A vector popup menu. Like a [`VecView`], but for popups instead.
-pub struct VecPopup<'a, T> {
-    view: VecView<'a, T>,
+/// A simple popup menu that displays just a string
+pub struct SimplePopup<'a> {
+    text: &'a String,
     size: PopupSize,
+    fg: Color,
+    bg: Color,
+    wrap: bool,
+    scroll: u32,
+    block: Option<Block<'a>>,
+    alignment: Alignment,
 }
 
-impl<'a, T> VecPopup<'a, T> {
-    /// Create a new [`VecPopup`] with the given size and the given data
-    pub fn new<D>(data: D, size: PopupSize) -> Self
-    where
-        VecView<'a, T>: From<D>,
-    {
+impl<'a> SimplePopup<'a> {
+    /// Create a new [`SimplePopup`] with the given size and the given data
+    pub fn new(data: &'a String, size: PopupSize) -> Self {
         Self {
-            view: VecView::from(data),
+            text: data,
             size,
+            fg: Color::White,
+            bg: Color::Black,
+            wrap: false,
+            scroll: 0,
+            block: None,
+            alignment: Alignment::Left,
         }
     }
 
     /// Set the foreground color of the widget
     pub fn fg(mut self, color: Color) -> Self {
-        self.view.fg = color;
+        self.fg = color;
         self
     }
 
     /// Set the background color of the widget
     pub fn bg(mut self, color: Color) -> Self {
-        self.view.bg = color;
+        self.bg = color;
         self
     }
 
     /// Set whether or not the widget will wrap content
     pub fn wrap(mut self) -> Self {
-        self.view.wrap = true;
+        self.wrap = true;
         self
     }
 
     /// Scroll the widget content by the given height
     pub fn scroll_to(mut self, height: u32) -> Self {
-        self.view.scroll = height;
-        self
-    }
-
-    /// Highlight the specified element in the vector with the specified color
-    pub fn highlight(mut self, item: u32, color: Color) -> Self {
-        self.view.highlight = Some((item, color));
+        self.scroll = height;
         self
     }
 
@@ -60,14 +61,19 @@ impl<'a, T> VecPopup<'a, T> {
     ///
     /// Block padding should not be used.
     pub fn block(mut self, block: Block<'a>) -> Self {
-        self.view.block = Some(block);
+        self.block = Some(block);
         self
     }
 
     /// Set the text alignment of the widget's content
     pub fn alignment(mut self, alignment: Alignment) -> Self {
-        self.view.alignment = alignment;
+        self.alignment = alignment;
         self
+    }
+
+    /// Get the popup syle
+    pub fn style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
     }
 
     pub fn rect(&self, parent: Rect) -> Rect {
@@ -119,18 +125,23 @@ impl<'a, T> VecPopup<'a, T> {
     }
 }
 
-impl<'a, T> Widget for VecPopup<'a, T>
-where
-    Cow<'a, str>: From<&'a T>,
+impl<'a> Widget for SimplePopup<'a>
 {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let chunk = self.rect(area);
 
         let clear_string = " ".repeat(chunk.width as usize);
         for y in chunk.top()..chunk.bottom() {
-            buf.set_string(chunk.x, y, &clear_string, self.view.style())
+            buf.set_string(chunk.x, y, &clear_string, self.style())
         }
 
-        self.view.render(chunk, buf);
+        let mut p = Paragraph::new(self.text.clone()).style(self.style())
+            .block(self.block.unwrap_or_default()).scroll((self.scroll as u16, 0)).alignment(self.alignment);
+
+        if self.wrap {
+            p = p.wrap(Wrap { trim: false });
+        }
+
+        p.render(chunk, buf);
     }
 }
