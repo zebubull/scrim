@@ -85,15 +85,14 @@ impl<'a, T> VecPopup<'a, T> {
                     .split(parent)[1];
 
                 let hspacing = (parent.width - width) / 2;
-                let hchunk = Layout::default()
+                Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(vec![
                         Constraint::Length(hspacing),
                         Constraint::Length(width),
                         Constraint::Length(hspacing),
                     ])
-                    .split(vchunk)[1];
-                hchunk
+                    .split(vchunk)[1]
             }
             Percentage(width, height) => {
                 let vchunk = Layout::default()
@@ -105,15 +104,14 @@ impl<'a, T> VecPopup<'a, T> {
                     ])
                     .split(parent)[1];
 
-                let hchunk = Layout::default()
+                Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(vec![
                         Constraint::Percentage((100 - width) / 2),
                         Constraint::Percentage(width),
                         Constraint::Percentage((100 - width) / 2),
                     ])
-                    .split(vchunk)[1];
-                hchunk
+                    .split(vchunk)[1]
             }
         }
     }

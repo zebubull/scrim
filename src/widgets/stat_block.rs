@@ -1,6 +1,6 @@
 use ratatui::{
     layout::Alignment,
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{
         block::{Position, Title},
@@ -8,7 +8,7 @@ use ratatui::{
     },
 };
 
-use crate::{player::stats::Stats, widgets::colored_span};
+use crate::player::stats::Stats;
 
 /// A widget that renders the player's stat block.
 pub struct StatBlock<'a> {
@@ -54,15 +54,14 @@ impl<'a> Widget for StatBlock<'a> {
             .into_iter()
             .enumerate()
             .for_each(|(idx, stat)| {
-                lines.push(Line::from(colored_span!(
-                    format!("{}: {: <2}", STAT_NAMES[idx], stat),
-                    Color::Yellow
-                )));
-                lines.push(Line::from(colored_span!(
-                    format!("{:+}", ((stat as f32 - 10.0) / 2.0).floor() as i8),
-                    Color::Yellow
-                )));
-                lines.push(Line::from(colored_span!("-------", Color::Yellow)));
+                lines.push(Line::from(
+                    Span::from(format!("{}: {: <2}", STAT_NAMES[idx], stat)).yellow(),
+                ));
+                lines.push(Line::from(
+                    Span::from(format!("{:+}", ((stat as f32 - 10.0) / 2.0).floor() as i8))
+                        .yellow(),
+                ));
+                lines.push(Line::from(Span::from("-------").yellow()));
             });
 
         if let Some(item) = self.highlight {

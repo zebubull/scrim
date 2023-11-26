@@ -17,8 +17,7 @@ pub struct VecView<'a, T> {
     pub(super) alignment: Alignment,
 }
 
-impl<'a, T> VecView<'a, T>
-{
+impl<'a, T> VecView<'a, T> {
     /// Set the foreground color of the widget
     pub fn fg(mut self, color: Color) -> Self {
         self.fg = color;
@@ -51,7 +50,8 @@ impl<'a, T> VecView<'a, T>
 
     /// Wrap the widget in a block.
     ///
-    /// Block padding should not be used.
+    /// Block padding should not be used and borders should be set. Otherwise,
+    /// do not use a block.
     pub fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
         self
@@ -73,8 +73,9 @@ where
     &'a T: Into<Cow<'a, str>>,
 {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        // This does not account for block padding because it is private
-        let content_height = if let Some(_) = self.block {
+        // This does not account for block padding and assumes borders. AFAIK there is no way to get
+        // that data from the block so...
+        let content_height = if self.block.is_some() {
             area.height - 2
         } else {
             area.height
@@ -93,7 +94,9 @@ where
                 .patch_style(Style::default().fg(self.bg).bg(color));
         }
 
-        let mut p = Paragraph::new(lines).alignment(self.alignment).block(self.block.unwrap_or_default());
+        let mut p = Paragraph::new(lines)
+            .alignment(self.alignment)
+            .block(self.block.unwrap_or_default());
 
         if self.wrap {
             p = p.wrap(Wrap { trim: false });

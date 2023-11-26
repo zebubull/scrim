@@ -1,14 +1,11 @@
 use ratatui::{
     layout::Alignment,
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{
-    player::Player,
-    widgets::{colored_span, separator},
-};
+use crate::{player::Player, widgets::separator};
 
 /// A widget to display the player info bar.
 pub struct InfoBar<'a> {
@@ -46,32 +43,27 @@ impl<'a> InfoBar<'a> {
 impl<'a> Widget for InfoBar<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let mut line = Line::from(vec![
-            colored_span!(format!("HP: {}", self.player.hp), Color::Yellow),
-            colored_span!("/", Color::Yellow),
-            colored_span!(format!("{}", self.player.max_hp), Color::Yellow),
+            Span::from(format!("HP: {}", self.player.hp)).yellow(),
+            Span::from("/").yellow(),
+            Span::from(format!("{}", self.player.max_hp)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(format!("Temp HP: {}", self.player.temp_hp), Color::Yellow),
+            Span::from(format!("Temp HP: {}", self.player.temp_hp)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(format!("AC: {}", self.player.ac), Color::Yellow),
+            Span::from(format!("AC: {}", self.player.ac)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(format!("Prof: {:+}", self.player.prof_bonus), Color::Yellow),
+            Span::from(format!("Prof: {:+}", self.player.prof_bonus)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(
-                format!(
-                    "Hit dice: {}d{}",
-                    self.player.hit_dice_remaining, self.player.hit_dice
-                ),
-                Color::Yellow
-            ),
+            Span::from(format!(
+                "Hit dice: {}d{}",
+                self.player.hit_dice_remaining, self.player.hit_dice
+            ))
+            .yellow(),
             separator!(Color::Yellow),
-            colored_span!(
-                format!("Background: {}", self.player.background),
-                Color::Yellow
-            ),
+            Span::from(format!("Background: {}", self.player.background)).yellow(),
             separator!(Color::Yellow),
-            colored_span!("(F)unds", Color::Yellow),
+            Span::from("(F)unds").yellow(),
             separator!(Color::Yellow),
-            colored_span!("(P)roficiencies", Color::Yellow),
+            Span::from("(P)roficiencies").yellow(),
         ]);
 
         if let Some(item) = self.highlight {

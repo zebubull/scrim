@@ -281,7 +281,7 @@ impl App {
 
     /// Try to lookup the given text
     fn lookup_text(&mut self, lookup: &Lookup, text: &str) {
-        let lookup = lookup.get_entry(&text);
+        let lookup = lookup.get_entry(text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
         self.current_lookup = match lookup {
@@ -339,7 +339,7 @@ impl App {
             LookupResult::Completion(lookup)
         } else {
             self.popup_scroll_provider.set_max(1);
-            LookupResult::Invalid(format!("{}", text.clone()))
+            LookupResult::Invalid(text.clone())
         }
     }
 

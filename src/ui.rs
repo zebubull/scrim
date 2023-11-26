@@ -9,37 +9,30 @@ use crate::{
     core::{App, LookupResult, Selected},
     player::{class::Class, skills::SKILL_NAMES, spells::SpellSlots},
     widgets::{
-        PopupSize,
-        info_bar::InfoBar,
-        player_bar::PlayerBar,
-        stat_block::StatBlock,
-        tab_panel::TabPanel,
-        vec_popup::VecPopup, simple_popup::SimplePopup,
+        info_bar::InfoBar, player_bar::PlayerBar, simple_popup::SimplePopup, stat_block::StatBlock,
+        tab_panel::TabPanel, vec_popup::VecPopup, PopupSize,
     },
 };
 
 /// Show the quit confirmation menu
 fn show_quit_popup(app: &mut App, f: &mut Frame) {
-    let data =  [
+    let data = [
         String::from("y - yes (save)"),
         String::from("s - yes (don't save)"),
         String::from("q/n - no"),
     ];
 
-    let popup = VecPopup::new(
-        &data[..],
-        PopupSize::Absolute(24, 7),
-    )
-    .fg(Color::Black)
-    .bg(Color::Yellow)
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Really Quit?")
-            .title_alignment(Alignment::Center)
-            .padding(Padding::uniform(1)),
-    )
-    .alignment(Alignment::Left);
+    let popup = VecPopup::new(&data[..], PopupSize::Absolute(24, 7))
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Really Quit?")
+                .title_alignment(Alignment::Center)
+                .padding(Padding::uniform(1)),
+        )
+        .alignment(Alignment::Left);
 
     app.popup_scroll_mut().update_frame_height(7);
     f.render_widget(popup, f.size());
@@ -58,15 +51,17 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             let popup = SimplePopup::new(&text, PopupSize::Percentage(65, 25))
                 .bg(Color::Yellow)
                 .fg(Color::Black)
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                    .title("Lookup Failed")
-                    .title_alignment(Alignment::Center));
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title("Lookup Failed")
+                        .title_alignment(Alignment::Center),
+                );
 
             let frame_height = popup.rect(f.size()).height as u32 - 2; // Border
             f.render_widget(popup, f.size());
             frame_height
-        },
+        }
         LookupResult::Success(entry) => {
             let entry = entry.as_ref();
             let text = format!("{}\n{}", entry.description_short, entry.description);
@@ -75,10 +70,12 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .bg(Color::Yellow)
                 .wrap()
                 .scroll_to(app.popup_scroll().get_scroll())
-                .block(Block::default()
-                    .title(entry.name.clone())
-                    .title_alignment(Alignment::Center)
-                    .borders(Borders::ALL));
+                .block(
+                    Block::default()
+                        .title(entry.name.clone())
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL),
+                );
 
             let frame_height = popup.rect(f.size()).height as u32 - 2; // Border
             f.render_widget(popup, f.size());
@@ -91,11 +88,13 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .fg(Color::Black)
                 .scroll_to(app.popup_scroll().get_scroll())
                 .highlight(app.popup_scroll().get_line(), Color::Black)
-                .block(Block::default()
-                    .title(format!("{} results found", entries.len()))
-                    .title_alignment(Alignment::Center)
-                    .borders(Borders::ALL)
-                    .padding(Padding::vertical(1)));
+                .block(
+                    Block::default()
+                        .title(format!("{} results found", entries.len()))
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .padding(Padding::vertical(1)),
+                );
 
             let frame_height = popup.rect(f.size()).height as u32 - 4; // Border + padding
             f.render_widget(popup, f.size());
@@ -107,11 +106,13 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
                 .fg(Color::Black)
                 .highlight(app.popup_scroll().get_line(), Color::Black)
                 .scroll_to(app.popup_scroll().get_scroll())
-                .block(Block::default()
-                    .title("Load Player")
-                    .title_alignment(Alignment::Center)
-                    .borders(Borders::ALL)
-                    .padding(Padding::vertical(1)));
+                .block(
+                    Block::default()
+                        .title("Load Player")
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .padding(Padding::vertical(1)),
+                );
 
             let frame_height = popup.rect(f.size()).height as u32 - 4; // Border + padding
             f.render_widget(popup, f.size());
@@ -141,20 +142,16 @@ fn show_spell_slots(app: &mut App, f: &mut Frame) {
 
     let lines = if let Class::Warlock = app.player.class {
         let level = SpellSlots::warlock_slot_level(app.player.level);
-        vec![
-            format!("{}{}: {} / {}", level, ordinal(level), t.warlock, r.warlock)
-        ]
+        vec![format!(
+            "{}{}: {} / {}",
+            level,
+            ordinal(level),
+            t.warlock,
+            r.warlock
+        )]
     } else {
         (0..9)
-            .map(|i| {
-                format!(
-                    "{}{}: {} / {}",
-                    i + 1,
-                    ordinal(i as u32 + 1),
-                    r[i],
-                    t[i]
-                )
-            })
+            .map(|i| format!("{}{}: {} / {}", i + 1, ordinal(i as u32 + 1), r[i], t[i]))
             .collect()
     };
 
@@ -163,75 +160,87 @@ fn show_spell_slots(app: &mut App, f: &mut Frame) {
         .bg(Color::Yellow)
         .highlight(app.popup_scroll().get_line(), Color::Black)
         .alignment(Alignment::Center)
-        .block(Block::default()
-            .title("Spell Slots")
-            .title_alignment(Alignment::Center)
-            .borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title("Spell Slots")
+                .title_alignment(Alignment::Center)
+                .borders(Borders::ALL),
+        );
 
     app.popup_scroll_mut().update_frame_height(11);
 
     f.render_widget(popup, f.size());
 }
 
+/// display the player funds popup
 fn show_funds(app: &mut App, f: &mut Frame) {
     const LABELS: [&str; 4] = ["PP", "GP", "SP", "CP"];
     let lines: Vec<String> = (0..4)
         .map(|i| {
             let fundage = app.player.funds.nth(i);
-                format!("{}: {}", LABELS[i as usize], fundage)
+            format!("{}: {}", LABELS[i as usize], fundage)
         })
         .collect();
-
 
     let popup = VecPopup::new(&lines, PopupSize::Absolute(12, 8))
         .fg(Color::Black)
         .bg(Color::Yellow)
         .highlight(app.popup_scroll().get_line(), Color::Black)
         .alignment(Alignment::Center)
-        .block(Block::default()
-            .title("Funds")
-            .title_alignment(Alignment::Center)
-            .borders(Borders::ALL)
-            .padding(Padding::vertical(1)));
+        .block(
+            Block::default()
+                .title("Funds")
+                .title_alignment(Alignment::Center)
+                .borders(Borders::ALL)
+                .padding(Padding::vertical(1)),
+        );
 
     app.popup_scroll_mut().update_frame_height(6);
     f.render_widget(popup, f.size());
 }
 
+/// display the free lookup prompt menu
 fn show_free_lookup_prompt(app: &mut App, f: &mut Frame) {
-    let popup = SimplePopup::new(&app.lookup_buffer, PopupSize::Absolute(f.size().width-10, 3))
-        .fg(Color::Black)
-        .bg(Color::Yellow)
-        .block(Block::default()
+    let popup = SimplePopup::new(
+        &app.lookup_buffer,
+        PopupSize::Absolute(f.size().width - 10, 3),
+    )
+    .fg(Color::Black)
+    .bg(Color::Yellow)
+    .block(
+        Block::default()
             .title("Lookup")
             .title_alignment(Alignment::Center)
-            .borders(Borders::ALL));
+            .borders(Borders::ALL),
+    );
 
     f.render_widget(popup, f.size());
 }
 
+/// display the proficiency popup menu
 fn show_proficiencies(app: &mut App, f: &mut Frame) {
     let lines: Vec<String> = app
         .player
         .get_skills()
         .iter()
         .enumerate()
-        .map(|(i, skill)| {
-                format!("{}: {:+}", SKILL_NAMES[i], skill)
-        })
+        .map(|(i, skill)| format!("{}: {:+}", SKILL_NAMES[i], skill))
         .collect();
-    
+
     let popup = VecPopup::new(&lines, PopupSize::Percentage(35, 55))
         .bg(Color::Yellow)
         .fg(Color::Black)
         .scroll_to(app.popup_scroll().get_scroll())
         .highlight(app.popup_scroll().get_line(), Color::Black)
-        .block(Block::default()
-            .title("Proficiencies")
-            .title_alignment(Alignment::Center)
-            .borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title("Proficiencies")
+                .title_alignment(Alignment::Center)
+                .borders(Borders::ALL),
+        );
 
-    app.popup_scroll_mut().update_frame_height(popup.rect(f.size()).height as u32 - 2);
+    app.popup_scroll_mut()
+        .update_frame_height(popup.rect(f.size()).height as u32 - 2);
     f.render_widget(popup, f.size());
 }
 

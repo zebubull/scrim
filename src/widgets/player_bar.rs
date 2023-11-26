@@ -1,14 +1,11 @@
 use ratatui::{
     layout::Alignment,
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{
-    player::Player,
-    widgets::{colored_span, separator},
-};
+use crate::{player::Player, widgets::separator};
 
 /// A widget that renders the top player bar.
 pub struct PlayerBar<'a> {
@@ -46,21 +43,15 @@ impl<'a> PlayerBar<'a> {
 impl<'a> Widget for PlayerBar<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let mut items = vec![
-            colored_span!(format!("Name: {: <5}", self.player.name), Color::Yellow),
+            Span::from(format!("Name: {: <5}", self.player.name)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(format!("(R)ace: {: <10}", self.player.race), Color::Yellow),
+            Span::from(format!("(R)ace: {: <10}", self.player.race)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(format!("Level: {: <2}", self.player.level), Color::Yellow),
+            Span::from(format!("Level: {: <2}", self.player.level)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(
-                format!("(C)lass: {: <10}", self.player.class),
-                Color::Yellow
-            ),
+            Span::from(format!("(C)lass: {: <10}", self.player.class)).yellow(),
             separator!(Color::Yellow),
-            colored_span!(
-                format!("Alignment: {: <2}", self.player.alignment),
-                Color::Yellow
-            ),
+            Span::from(format!("Alignment: {: <2}", self.player.alignment)).yellow(),
         ];
 
         if let Some(item) = self.highlight {

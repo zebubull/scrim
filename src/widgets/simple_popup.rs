@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, Widget, Paragraph, Wrap},
+    widgets::{Block, Paragraph, Widget, Wrap},
 };
 
 use super::PopupSize;
@@ -91,15 +91,14 @@ impl<'a> SimplePopup<'a> {
                     .split(parent)[1];
 
                 let hspacing = (parent.width - width) / 2;
-                let hchunk = Layout::default()
+                Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(vec![
                         Constraint::Length(hspacing),
                         Constraint::Length(width),
                         Constraint::Length(hspacing),
                     ])
-                    .split(vchunk)[1];
-                hchunk
+                    .split(vchunk)[1]
             }
             Percentage(width, height) => {
                 let vchunk = Layout::default()
@@ -111,22 +110,20 @@ impl<'a> SimplePopup<'a> {
                     ])
                     .split(parent)[1];
 
-                let hchunk = Layout::default()
+                Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(vec![
                         Constraint::Percentage((100 - width) / 2),
                         Constraint::Percentage(width),
                         Constraint::Percentage((100 - width) / 2),
                     ])
-                    .split(vchunk)[1];
-                hchunk
+                    .split(vchunk)[1]
             }
         }
     }
 }
 
-impl<'a> Widget for SimplePopup<'a>
-{
+impl<'a> Widget for SimplePopup<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let chunk = self.rect(area);
 
@@ -135,8 +132,11 @@ impl<'a> Widget for SimplePopup<'a>
             buf.set_string(chunk.x, y, &clear_string, self.style())
         }
 
-        let mut p = Paragraph::new(self.text.clone()).style(self.style())
-            .block(self.block.unwrap_or_default()).scroll((self.scroll as u16, 0)).alignment(self.alignment);
+        let mut p = Paragraph::new(self.text.clone())
+            .style(self.style())
+            .block(self.block.unwrap_or_default())
+            .scroll((self.scroll as u16, 0))
+            .alignment(self.alignment);
 
         if self.wrap {
             p = p.wrap(Wrap { trim: false });
