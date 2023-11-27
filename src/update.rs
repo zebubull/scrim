@@ -21,10 +21,18 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
 
         if in_tab {
             match key_event.code {
-                KeyCode::Up => app.tab_scroll_mut().scroll_up(1),
-                KeyCode::Down => app.tab_scroll_mut().scroll_down(1),
+                KeyCode::Up => {
+                    app.tab_scroll_mut().scroll_up(1);
+                    let line = app.tab_scroll().get_line() as usize;
+                    app.index = app.index.min(app.current_tab()[line].len() as u32);
+                }
+                KeyCode::Down => {
+                    app.tab_scroll_mut().scroll_down(1);
+                    let line = app.tab_scroll().get_line() as usize;
+                    app.index = app.index.min(app.current_tab()[line].len() as u32);
+                }
                 KeyCode::Left => app.index = app.index.saturating_sub(1),
-                KeyCode::Right => app.index = (app.index + 1).min(app.current_tab()[app.popup_scroll().get_line() as usize].len() as u32),
+                KeyCode::Right => app.index = (app.index + 1).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32),
                 _ => {},
             }
         } else {
@@ -41,6 +49,15 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                             if index > 0 {
                                 text.remove(index - 1);
                                 app.index -= 1;
+                            } else {
+                                let line = app.tab_scroll().get_line() as usize;
+                                if line > 0 {
+                                    let cur = app.current_tab_mut().remove(line);
+                                    let idx = app.current_tab()[line-1].len();
+                                    app.index = idx as u32;
+                                    app.current_tab_mut()[line-1].push_str(&cur);
+                                    app.tab_scroll_mut().scroll_up(1);
+                                }
                             }
                         } else {
                             text.pop();
@@ -165,10 +182,20 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 _ => {}
             },
             Some(Selected::TabItem) => match key_event.code {
-                KeyCode::Char('k') | KeyCode::Up => app.tab_scroll_mut().scroll_up(1),
-                KeyCode::Char('j') | KeyCode::Down => app.tab_scroll_mut().scroll_down(1),
+                KeyCode::Char('k') | KeyCode::Up => {
+                    app.tab_scroll_mut().scroll_up(1);
+                    let line = app.tab_scroll().get_line() as usize;
+                    app.index = app.index.min(app.current_tab()[line].len() as u32);
+                }
+                KeyCode::Char('j') | KeyCode::Down => {
+                    app.tab_scroll_mut().scroll_down(1);
+                    let line = app.tab_scroll().get_line() as usize;
+                    app.index = app.index.min(app.current_tab()[line].len() as u32);
+                }
                 KeyCode::Char('h') | KeyCode::Left => app.index = app.index.saturating_sub(1),
-                KeyCode::Char('l') | KeyCode::Right => app.index = (app.index + 1).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32),
+                KeyCode::Char('l') | KeyCode::Right => {
+                    app.index = (app.index + 1).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32)
+                }
                 KeyCode::Char('K') => app.tab_scroll_mut().scroll_up(10),
                 KeyCode::Char('J') => app.tab_scroll_mut().scroll_down(10),
                 KeyCode::Char('i') => app.editing = true,
