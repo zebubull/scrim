@@ -244,6 +244,27 @@ fn show_proficiencies(app: &mut App, f: &mut Frame) {
     f.render_widget(popup, f.size());
 }
 
+fn show_error_popup(app: &mut App, f: &mut Frame) {
+    let popup = SimplePopup::new(
+        app.error
+            .as_ref()
+            .expect("cannot show error popup with no error message"),
+        PopupSize::Percentage(75, 75),
+    )
+    .bg(Color::Yellow)
+    .fg(Color::Black)
+    .scroll_to(app.popup_scroll().get_line())
+    .wrap()
+    .block(
+        Block::default()
+            .title("Error")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL),
+    );
+
+    f.render_widget(popup, f.size())
+}
+
 /// Get the player bar, info bar, and stat/tab chunk rects.
 fn main_layout(parent: Rect) -> (Rect, Rect, Rect) {
     let chunks = Layout::default()
@@ -351,6 +372,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         Some(Selected::Funds) => show_funds(app, f),
         Some(Selected::FreeLookup) => show_free_lookup_prompt(app, f),
         Some(Selected::Proficiency) => show_proficiencies(app, f),
+        Some(Selected::Error) => show_error_popup(app, f),
         _ => {}
     }
 }

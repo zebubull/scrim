@@ -329,6 +329,18 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                 }
                 _ => {}
             },
+            Some(Selected::Error) => match key_event.code {
+                KeyCode::Char('k') => app.popup_scroll_mut().scroll_up(1),
+                KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
+                KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
+                KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
+                KeyCode::Char('q') | KeyCode::Enter => {
+                    app.current_lookup = None;
+                    app.selected = None;
+                    app.error = None;
+                }
+                _ => {}
+            },
             None => match key_event.code {
                 KeyCode::Char('u') => {
                     app.index = 0;

@@ -37,7 +37,7 @@ fn main() -> Result<()> {
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
-    app.update_viewport_height(terminal.size()?.height)?;
+    app.update_viewport_height(terminal.size()?.height);
     const AUTOSAVE_MINS: u64 = 5;
     let events = EventHandler::new(AUTOSAVE_MINS * 60 * 1000);
     let mut tui = Tui::new(terminal, events);
@@ -46,7 +46,10 @@ fn main() -> Result<()> {
     if path.is_some() {
         let path = PathBuf::from(path.as_ref().unwrap());
         if path.exists() {
-            app.load_player(path)?;
+            match app.load_player(path) {
+                Ok(_) => {}
+                Err(e) => app.show_error(strip_ansi_escapes::strip_str(&format!("{:?}", e))),
+            }
         }
     }
 
@@ -55,12 +58,20 @@ fn main() -> Result<()> {
     while !app.should_quit {
         tui.draw(&mut app)?;
         // Handle events
-        match tui.events.next().unwrap() {
-            Event::Tick => app.save_player()?,
-            Event::Key(key_event) => update(&mut app, &lookup, key_event)?,
-            Event::Mouse(_) => {}
-            Event::Resize(_, y) => app.update_viewport_height(y)?,
+        let res = match tui.events.next().unwrap() {
+            Event::Tick => app.save_player(),
+            Event::Key(key_event) => update(&mut app, &lookup, key_event),
+            Event::Mouse(_) => Ok(()),
+            Event::Resize(_, y) => {
+                app.update_viewport_height(y);
+                Ok(())
+            }
         };
+
+        match res {
+            Ok(_) => {}
+            Err(e) => app.show_error(strip_ansi_escapes::strip_str(&format!("{:?}", e))),
+        }
     }
 
     // Quit the app

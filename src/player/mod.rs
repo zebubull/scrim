@@ -29,7 +29,10 @@ use self::spells::SpellSlots;
 use self::stats::Stats;
 use self::util::{calculate_hp, get_modifier};
 
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{
+    eyre::{eyre, WrapErr},
+    Result,
+};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -105,12 +108,26 @@ impl Player {
             )
         })?;
 
-        let player = serde_json::from_slice(bytes.as_slice()).wrap_err_with(|| {
-            format!(
-                "failed to parse file '{}'",
+        let ext = path.extension().unwrap_or_default();
+        let player = match ext.to_str().unwrap_or(&ext.to_string_lossy()) {
+            // Legacy .player files always use JSON format
+            "json" | "player" => serde_json::from_slice(bytes.as_slice()).wrap_err_with(|| {
+                format!(
+                    "failed to parse file '{}'",
+                    path.to_str().unwrap_or(&path.to_string_lossy())
+                )
+            }),
+            "yaml" => serde_yaml::from_slice(bytes.as_slice()).wrap_err_with(|| {
+                format!(
+                    "failed to parse file '{}'",
+                    path.to_str().unwrap_or(&path.to_string_lossy())
+                )
+            }),
+            _ => Err(eyre!(format!(
+                "file '{}' has unknown or unsupported file type",
                 path.to_str().unwrap_or(&path.to_string_lossy())
-            )
-        })?;
+            ))),
+        }?;
 
         Ok(player)
     }

@@ -47,6 +47,8 @@ pub enum Selected {
     Proficiency,
     /// The load menu is showing
     Load,
+    /// The error popup is showing
+    Error,
 }
 
 /// An enum that represents the way in which a field can be modified by the user.
@@ -98,10 +100,14 @@ pub struct App {
     pub path: Option<PathBuf>,
     /// The most recent lookup result, if it exists.
     pub current_lookup: Option<LookupResult>,
-    /// The current free lookup buffer
+    /// The current free lookup buffer.
     pub lookup_buffer: String,
+    /// The current selected control.
     pub selected: Option<Selected>,
+    /// The current selected index for certain controls.
     pub index: u32,
+    /// The current error string, if it exists.
+    pub error: Option<String>,
     tab_scroll_provider: ScrollProvider,
     popup_scroll_provider: ScrollProvider,
 }
@@ -150,25 +156,34 @@ impl App {
     ///
     /// This value is used in scroll calculations,
     /// so calling this function may scroll the active pane.
-    pub fn update_viewport_height(&mut self, height: u16) -> Result<()> {
+    pub fn update_viewport_height(&mut self, height: u16) {
         // TODO: popup frame provider needs to be updated as well.
         self.tab_scroll_provider
             .update_frame_height(crate::ui::tab_pane_height(height) as u32);
-        Ok(())
     }
 
+    pub fn show_error(&mut self, error: String) {
+        self.error = Some(error);
+        self.selected = Some(Selected::Error);
+        self.popup_scroll_provider.clear_max();
+    }
+
+    /// Returns a reference to the tab scroll provider
     pub fn tab_scroll(&self) -> &ScrollProvider {
         &self.tab_scroll_provider
     }
 
+    /// Returns a mutable reference to the tab scroll provider
     pub fn tab_scroll_mut(&mut self) -> &mut ScrollProvider {
         &mut self.tab_scroll_provider
     }
 
+    /// Returns a reference to the popup scroll provider
     pub fn popup_scroll(&self) -> &ScrollProvider {
         &self.popup_scroll_provider
     }
 
+    /// Returns a mutable reference to the popup scroll provider
     pub fn popup_scroll_mut(&mut self) -> &mut ScrollProvider {
         &mut self.popup_scroll_provider
     }
@@ -266,6 +281,7 @@ impl App {
         self.selected = Some(Selected::ItemLookup(item));
     }
 
+    /// Lookup the player's current class
     pub fn lookup_class(&mut self, lookup: &Lookup) {
         let text = self.player.class.to_string();
         self.lookup_text(lookup, &text);
@@ -329,6 +345,7 @@ impl App {
         Ok(())
     }
 
+    /// Get the completion result for the provided text
     pub fn get_completion(&mut self, text: &str, lookup: &Lookup) -> LookupResult {
         let text = text.trim().to_ascii_lowercase();
         let lookup = lookup.get_completions(&text);
@@ -343,6 +360,7 @@ impl App {
         }
     }
 
+    /// Complete the current text using the current selection
     pub fn finish_completion(&mut self) {
         let comp_item = self.popup_scroll_provider.get_line();
 
@@ -376,6 +394,7 @@ impl App {
                 | Selected::Funds
                 | Selected::FreeLookupSelect
                 | Selected::Proficiency
+                | Selected::Error
                 | Selected::Load,
             ) => None,
             Some(Selected::TopBarItem) => match self.index {
