@@ -100,8 +100,9 @@ impl Lookup {
         if !self.loaded {
             self.load()?;
         }
-
-        Ok(self.entries.get(&name.to_lowercase()))
+        
+        let text = name.trim_start().to_lowercase();
+        Ok(self.entries.get(&text))
     }
 
     /// Search the lookup table for all possible completions for the given text
