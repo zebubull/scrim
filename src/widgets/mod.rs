@@ -12,6 +12,7 @@ pub mod tab_panel;
 pub mod vec_popup;
 /// Widget that displays the contents of a vector
 pub mod vec_view;
+pub mod text_edit;
 
 pub enum PopupSize {
     Percentage(u16, u16),

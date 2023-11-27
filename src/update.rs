@@ -11,19 +11,44 @@ use crossterm::event::{KeyCode, KeyEvent};
 /// Process the given key event and update that app's state accordingly.
 pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result<()> {
     if app.editing {
-        if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
+        if key_event.code == KeyCode::Esc {
             app.editing = false;
             return Ok(());
         }
 
+        let in_tab = app.selected.unwrap() == Selected::TabItem;
+        let index = app.index as usize;
+
+        if in_tab {
+            match key_event.code {
+                KeyCode::Up => app.tab_scroll_mut().scroll_up(1),
+                KeyCode::Down => app.tab_scroll_mut().scroll_down(1),
+                KeyCode::Left => app.index = app.index.saturating_sub(1),
+                KeyCode::Right => app.index = (app.index + 1).min(app.current_tab()[app.popup_scroll().get_line() as usize].len() as u32),
+                _ => {},
+            }
+        } else {
+            if key_event.code == KeyCode::Enter {
+                app.editing = false;
+                return Ok(());
+            }
+        }
         match app.get_selected_type() {
             Some(ControlType::TextInput(text)) => {
                 match key_event.code {
                     KeyCode::Backspace => {
-                        text.pop();
+                        if index > 0 {
+                            text.remove(index - 1);
+                            app.index -= 1;
+                        }
                     }
                     KeyCode::Char(c) => {
-                        text.push(c);
+                        if index == text.len() {
+                            text.push(c)
+                        } else {
+                            text.insert(index, c);
+                        }
+                        app.index += 1;
                     }
                     KeyCode::Tab if !app.current_tab().is_empty() => {
                         if let Some(Selected::TabItem) = app.selected {
@@ -32,13 +57,33 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                             app.editing = false;
                         }
                     }
+                    KeyCode::Enter => {
+                        let line = app.tab_scroll().get_line() as usize;
+                        if app.index as usize >= app.current_tab()[line].len() - 1 {
+                            app.append_item_to_tab();
+                        } else {
+                            app.append_item_to_tab();
+                            let index = app.index as usize;
+                            let (cur, next) = app.current_tab_mut()[line].split_at(index);
+                            let cur = String::from(cur);
+                            let next = String::from(next);
+                            app.current_tab_mut()[line] = cur;
+                            app.current_tab_mut()[line+1] = next;
+                        }
+
+                        app.index = 0;
+
+                    }
                     _ => {}
                 };
+
+
             }
             Some(ControlType::Cycle(value, min, max)) => {
                 match key_event.code {
                     KeyCode::Char('j') => *value = std::cmp::max(min, value.saturating_sub(1)),
                     KeyCode::Char('k') => *value = std::cmp::min(max, value.saturating_add(1)),
+                    KeyCode::Enter => app.editing = false,
                     _ => {}
                 };
             }
@@ -46,15 +91,16 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 match key_event.code {
                     KeyCode::Char('j') => *value = std::cmp::max(min, value.saturating_sub(1)),
                     KeyCode::Char('k') => *value = std::cmp::min(max, value.saturating_add(1)),
+                    KeyCode::Enter => app.editing = false,
                     _ => {}
                 };
                 app.player.recalculate();
             }
             Some(ControlType::CycleFn(prev, next)) => {
                 match key_event.code {
-                    // As of right now, all of the cycles should be reversed for natural scrolling
                     KeyCode::Char('j') => next(app),
                     KeyCode::Char('k') => prev(app),
+                    KeyCode::Enter => app.editing = false,
                     _ => {}
                 };
             }
@@ -84,9 +130,9 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 return Ok(());
             }
             KeyCode::Char('S') => app.save_player()?,
-            KeyCode::Char('1') => app.update_tab(Tab::Notes)?,
-            KeyCode::Char('2') => app.update_tab(Tab::Inventory)?,
-            KeyCode::Char('3') => app.update_tab(Tab::Spells)?,
+            KeyCode::Char('1') => app.update_tab(Tab::Notes),
+            KeyCode::Char('2') => app.update_tab(Tab::Inventory),
+            KeyCode::Char('3') => app.update_tab(Tab::Spells),
             _ => {}
         }
 
@@ -111,25 +157,58 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 _ => {}
             },
             Some(Selected::TabItem) => match key_event.code {
-                KeyCode::Char('k') => app.tab_scroll_mut().scroll_up(1),
-                KeyCode::Char('j') => app.tab_scroll_mut().scroll_down(1),
+                KeyCode::Char('k') | KeyCode::Up => app.tab_scroll_mut().scroll_up(1),
+                KeyCode::Char('j') | KeyCode::Down => app.tab_scroll_mut().scroll_down(1),
+                KeyCode::Char('h') | KeyCode::Left => app.index = app.index.saturating_sub(1),
+                KeyCode::Char('l') | KeyCode::Right => app.index = (app.index + 1).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32),
                 KeyCode::Char('K') => app.tab_scroll_mut().scroll_up(10),
                 KeyCode::Char('J') => app.tab_scroll_mut().scroll_down(10),
+                KeyCode::Char('i') => app.editing = true,
                 KeyCode::Char('a') => {
-                    app.append_item_to_tab()?;
+                    app.index = (app.index + 1).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32);
                     app.editing = true;
                 }
-                KeyCode::Char('i') => {
-                    app.insert_item_to_tab()?;
+                KeyCode::Char('I') => {
+                    app.index = 0;
+                    app.editing = true;
+                }
+                KeyCode::Char('A') => {
+                    app.index = app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32;
+                    app.editing = true;
+                }
+                KeyCode::Char('O') => {
+                    app.append_item_to_tab();
+                    app.index = 0;
+                    app.editing = true;
+                }
+                KeyCode::Char('o') => {
+                    app.insert_item_to_tab();
+                    app.index = 0;
                     app.editing = true;
                 }
                 KeyCode::Char('d') if !app.current_tab().is_empty() => {
-                    app.delete_item_from_tab()?;
+                    app.delete_item_from_tab();
+                    if app.current_tab().len() > 0 {
+                        app.index = (app.index).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32);
+                    } else {
+                        app.index = 0;
+                    }
+                }
+                KeyCode::Char('x') => {
+                    if app.index > 0 {
+                        let index = app.index as usize;
+                        if index < app.current_tab().len() {
+                            let line = app.tab_scroll().get_line() as usize;
+                            app.current_tab_mut()[line].remove( index);
+                            app.index = index.saturating_sub(1).min(app.current_tab()[line].len()) as u32;
+                        }
+                        app.index -= 1;
+                    }
                 }
                 KeyCode::Enter if !app.current_tab().is_empty() => {
                     app.editing = true;
                 }
-                KeyCode::Char('l') if !app.current_tab().is_empty() => {
+                KeyCode::Char('f') if !app.current_tab().is_empty() => {
                     app.lookup_current_selection(lookup)?
                 }
                 KeyCode::Tab if !app.current_tab().is_empty() => {
@@ -317,7 +396,6 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 KeyCode::Enter => {
                     app.selected = None;
                     app.tab_scroll_mut().reset();
-                    app.update_tab(Tab::Notes)?;
                     let p = match &app.current_lookup {
                         Some(LookupResult::Files(ref f)) => {
                             &f[app.popup_scroll().get_line() as usize]
@@ -325,6 +403,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                         _ => unreachable!(),
                     };
                     app.load_player(PathBuf::from(p))?;
+                    app.update_tab(Tab::Notes);
                     app.current_lookup = None;
                 }
                 _ => {}
@@ -385,6 +464,9 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 _ => {}
             },
         }
+    }
+    if app.current_tab().len() == 0 && app.editing {
+        app.append_item_to_tab();
     }
     Ok(())
 }

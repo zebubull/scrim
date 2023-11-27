@@ -384,7 +384,7 @@ fn draw_static_widgets(app: &mut App, f: &mut Frame) {
         .scroll(app.tab_scroll().get_scroll() as u16);
     if let Some(Selected::TabItem) = app.selected {
         tab_block = tab_block.highlight(
-            app.tab_scroll().get_line() as u16,
+            (app.tab_scroll().get_line() as u16, app.index as u16),
             if app.editing {
                 app.settings().highlight.into()
             } else {

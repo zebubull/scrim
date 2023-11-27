@@ -5,7 +5,9 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{core::Tab, player::Player, widgets::vec_view::VecView};
+use crate::{core::Tab, player::Player};
+
+use super::text_edit::TextEdit;
 
 /// A widget that renders the current tab panel, tab selection, and scroll display.
 pub struct TabPanel<'a> {
@@ -14,7 +16,7 @@ pub struct TabPanel<'a> {
     /// The tab to display
     tab: Tab,
     /// Which line to highlight, if any.
-    highlight: Option<(u16, Color)>,
+    highlight: Option<((u16, u16), Color)>,
     /// The amount of lines to scroll the viewport by.
     scroll: u16,
     fg: Color,
@@ -36,7 +38,7 @@ impl<'a> TabPanel<'a> {
     }
 
     /// Set the highlighted line.
-    pub fn highlight(mut self, item: u16, color: Color) -> Self {
+    pub fn highlight(mut self, item: (u16, u16), color: Color) -> Self {
         self.highlight = Some((item, color));
         self
     }
@@ -96,7 +98,7 @@ impl<'a> Widget for TabPanel<'a> {
             Tab::Spells => &self.player.spells,
         };
 
-        let mut tab_view = VecView::from(tab.as_slice())
+        let mut tab_view = TextEdit::from(tab.as_slice())
             .alignment(Alignment::Left)
             .fg(self.fg)
             .bg(self.bg)
@@ -110,7 +112,7 @@ impl<'a> Widget for TabPanel<'a> {
 
         if let Some((item, color)) = self.highlight {
             if !tab.is_empty() {
-                tab_view = tab_view.highlight(item as u32, color);
+                tab_view = tab_view.highlight(item, color);
             }
         }
 

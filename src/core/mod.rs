@@ -21,7 +21,7 @@ use self::{
 };
 
 /// An enum that represents a control as well as an index into that control's values, if it has any.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Selected {
     /// An item in the top bar.
     TopBarItem,
@@ -247,11 +247,28 @@ impl App {
     }
 
     /// Switches the current tab and recalculates the current tab scroll.
-    pub fn update_tab(&mut self, tab: Tab) -> Result<()> {
+    pub fn update_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.tab_scroll_provider
             .set_max(self.current_tab().len() as u32);
-        Ok(())
+    }
+
+    /// Scroll the current tab up by the specified number of lines.
+    /// 
+    /// This should be used instead of directly scrolling to ensure that the horizontal selection index is correct.
+    pub fn scroll_tab_up(&mut self, amount: u32) {
+        self.tab_scroll_provider.scroll_up(amount);
+        // Selecting 1 character past the string is allowed, so just the raw length is fine.
+        self.index = self.index.min(self.current_tab()[self.tab_scroll_provider.get_line() as usize].len() as u32);
+    }
+
+    /// Scroll the current tab up by the specified number of lines.
+    /// 
+    /// This should be used instead of directly scrolling to ensure that the horizontal selection index is correct.
+    pub fn scroll_tab_down(&mut self, amount: u32) {
+        self.tab_scroll_provider.scroll_down(amount);
+        // Selecting 1 character past the string is allowed, so just the raw length is fine.
+        self.index = self.index.min(self.current_tab()[self.tab_scroll_provider.get_line() as usize].len() as u32);
     }
 
     /// Adds an empty entry to the current tab.
@@ -259,7 +276,7 @@ impl App {
     /// The entry is located after the currently selected item
     /// or at the first position if the current tab is empty.
     /// This method will also recalculate the current tab scroll.
-    pub fn append_item_to_tab(&mut self) -> Result<()> {
+    pub fn append_item_to_tab(&mut self) {
         let mut item = self.tab_scroll_provider.get_line() as usize;
 
         let tab = self.current_tab_mut();
@@ -268,12 +285,11 @@ impl App {
             item += 1;
         }
 
-        tab.insert(item, String::from(" "));
+        tab.insert(item, String::new());
 
         let len = tab.len() as u32;
         self.tab_scroll_provider.set_max(len);
         self.tab_scroll_provider.scroll_down(1);
-        Ok(())
     }
 
     /// Adds an empty entry to the current tab.
@@ -281,14 +297,13 @@ impl App {
     /// The entry is located before the currently selected item
     /// or at the first position if the current tab is empty.
     /// This method will also recalculate the current tab scroll.
-    pub fn insert_item_to_tab(&mut self) -> Result<()> {
+    pub fn insert_item_to_tab(&mut self) {
         let item = self.tab_scroll_provider.get_line() as usize;
         let tab = self.current_tab_mut();
-        tab.insert(item, String::from(" "));
+        tab.insert(item, String::new());
 
         let len = tab.len() as u32;
         self.tab_scroll_provider.set_max(len);
-        Ok(())
     }
 
     /// Remove the currently selected entry from the tab.
@@ -296,7 +311,7 @@ impl App {
     /// This method does not check to make sure there is an entry
     /// to delete and will panic if the current tab is empty. It will
     /// also recalulate the current tab scroll.
-    pub fn delete_item_from_tab(&mut self) -> Result<()> {
+    pub fn delete_item_from_tab(&mut self) {
         let item = self.tab_scroll_provider.get_line() as usize;
 
         let tab = self.current_tab_mut();
@@ -304,8 +319,6 @@ impl App {
 
         let len = tab.len() as u32;
         self.tab_scroll_provider.set_max(len);
-
-        Ok(())
     }
 
     /// Uses the current selected tab item to lookup a reference entry.
