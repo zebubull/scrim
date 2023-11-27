@@ -117,11 +117,11 @@ impl<'a> Widget for TabPanel<'a> {
         tab_view.render(content_chunk, buf);
 
         let mut text = vec![
-            Span::styled("NOTES", Style::default().fg(self.fg).bg(self.bg)),
+            Span::styled("NOTES", Style::default().fg(self.select).bg(self.bg)),
             Span::from("   "),
-            Span::styled("INVENTORY", Style::default().fg(self.fg).bg(self.bg)),
+            Span::styled("INVENTORY", Style::default().fg(self.select).bg(self.bg)),
             Span::from("   "),
-            Span::styled("SP(E)LLS", Style::default().fg(self.fg).bg(self.bg)),
+            Span::styled("SP(E)LLS", Style::default().fg(self.select).bg(self.bg)),
         ];
 
         let idx = match self.tab {
@@ -134,9 +134,9 @@ impl<'a> Widget for TabPanel<'a> {
             Style::default()
                 .fg(self.bg)
                 .bg(if self.highlight.is_some() {
-                    self.select
-                } else {
                     self.fg
+                } else {
+                    self.select
                 }),
         );
 
