@@ -9,7 +9,7 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
 /// Process the given key event and update that app's state accordingly.
-pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()> {
+pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result<()> {
     if app.editing {
         if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
             app.editing = false;
@@ -130,7 +130,7 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.editing = true;
                 }
                 KeyCode::Char('l') if !app.current_tab().is_empty() => {
-                    app.lookup_current_selection(lookup)
+                    app.lookup_current_selection(lookup)?
                 }
                 KeyCode::Tab if !app.current_tab().is_empty() => {
                     app.complete_current_selection(lookup)?;
@@ -370,8 +370,8 @@ pub fn update(app: &mut App, lookup: &Lookup, key_event: KeyEvent) -> Result<()>
                     app.popup_scroll_mut().set_max(18);
                     app.selected = Some(Selected::Proficiency)
                 }
-                KeyCode::Char('C') => app.lookup_class(lookup),
-                KeyCode::Char('R') => app.lookup_race(lookup),
+                KeyCode::Char('C') => app.lookup_class(lookup)?,
+                KeyCode::Char('R') => app.lookup_race(lookup)?,
                 KeyCode::Char('L') => {
                     app.selected = Some(Selected::FreeLookup);
                     app.popup_scroll_mut().reset();

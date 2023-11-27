@@ -273,30 +273,40 @@ impl App {
     /// Uses the current selected tab item to lookup a reference entry.
     ///
     /// This method does not perform any kind of caching.
-    pub fn lookup_current_selection(&mut self, lookup: &Lookup) {
+    pub fn lookup_current_selection(&mut self, lookup: &mut Lookup) -> Result<()> {
         let item = self.tab_scroll_provider.get_line();
 
         let text = &self.current_tab()[item as usize].clone();
-        self.lookup_text(lookup, text);
+        self.lookup_text(lookup, text)?;
         self.selected = Some(Selected::ItemLookup(item));
+
+        Ok(())
     }
 
     /// Lookup the player's current class
-    pub fn lookup_class(&mut self, lookup: &Lookup) {
+    pub fn lookup_class(&mut self, lookup: &mut Lookup) -> Result<()> {
         let text = self.player.class.to_string();
-        self.lookup_text(lookup, &text);
+        self.lookup_text(lookup, &text)?;
         self.selected = Some(Selected::ClassLookup);
+
+        Ok(())
     }
 
     /// Lookup the player's current race.
-    pub fn lookup_race(&mut self, lookup: &Lookup) {
+    pub fn lookup_race(&mut self, lookup: &mut Lookup) -> Result<()> {
         let text = self.player.race.to_lookup_string();
-        self.lookup_text(lookup, text);
+        self.lookup_text(lookup, text)?;
         self.selected = Some(Selected::ClassLookup);
+
+        Ok(())
     }
 
     /// Try to lookup the given text
-    fn lookup_text(&mut self, lookup: &Lookup, text: &str) {
+    fn lookup_text(&mut self, lookup: &mut Lookup, text: &str) -> Result<()> {
+        if !lookup.loaded {
+            lookup.load()?;
+        }
+
         let lookup = lookup.get_entry(text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
@@ -312,6 +322,7 @@ impl App {
         };
 
         self.popup_scroll_provider.reset();
+        Ok(())
     }
 
     /// Lookup all player files in the cwd

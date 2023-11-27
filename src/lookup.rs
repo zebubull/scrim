@@ -45,6 +45,9 @@ impl Lookup {
 
     /// Load all lookup tables located in the directory specified by the load path.
     pub fn load(&mut self) -> Result<()> {
+        if self.loaded {
+            return Ok(())
+        }
         let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| {
             format!(
                 "failed to read lookups from '{}'",
@@ -88,6 +91,7 @@ impl Lookup {
                 self.entries.extend(lookup.entries.into_iter());
             });
 
+        self.loaded = true;
         Ok(())
     }
 

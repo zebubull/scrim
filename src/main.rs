@@ -30,10 +30,14 @@ fn main() -> Result<()> {
         lookup_path.push(".scrim/")
     }
 
-    println!("loading lookup tables...");
-    let mut lookup = Lookup::new(lookup_path);
+    let mut settings_path = PathBuf::new();
+    settings_path.push(home::home_dir().unwrap());
+    settings_path.push("./scrim");
+    if !settings_path.as_path().exists() {
+        std::fs::create_dir(settings_path.as_path())?;
+    }
 
-    lookup.load()?;
+    let mut lookup = Lookup::new(lookup_path);
 
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
@@ -60,7 +64,7 @@ fn main() -> Result<()> {
         // Handle events
         let res = match tui.events.next().unwrap() {
             Event::Tick => app.save_player(),
-            Event::Key(key_event) => update(&mut app, &lookup, key_event),
+            Event::Key(key_event) => update(&mut app, &mut lookup, key_event),
             Event::Mouse(_) => Ok(()),
             Event::Resize(_, y) => {
                 app.update_viewport_height(y);
