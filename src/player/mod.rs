@@ -159,7 +159,7 @@ impl Player {
     /// health accordingly.
     fn update_hp(&mut self) {
         let old_max = self.max_hp;
-        self.hp = calculate_hp(
+        self.max_hp = calculate_hp(
             self.level,
             self.hit_dice,
             self.stats.constitution,
@@ -202,9 +202,9 @@ impl Default for Player {
             level: 1,
             hit_dice: 8,
             hit_dice_remaining: 1,
-            hp: 8,
+            hp: 10,
             ac: 10,
-            max_hp: 8,
+            max_hp: 10,
             prof_bonus: 2,
             spell_slots: SpellSlots::from(1, &Class::Fighter),
             spell_slots_remaining: SpellSlots::from(1, &Class::Fighter),

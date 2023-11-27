@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Alignment, Rect},
     prelude::{Constraint, Direction, Frame, Layout},
-    style::Color,
+    style::Style,
     widgets::{Block, Borders, Padding},
 };
 
@@ -23,8 +23,8 @@ fn show_quit_popup(app: &mut App, f: &mut Frame) {
     ];
 
     let popup = VecPopup::new(&data[..], PopupSize::Absolute(24, 7))
-        .fg(Color::Black)
-        .bg(Color::Yellow)
+        .bg(app.settings().popup_background.into())
+        .fg(app.settings().popup_foreground.into())
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -49,8 +49,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
         LookupResult::Invalid(search) => {
             let text = format!("No results found for '{}'", search);
             let popup = SimplePopup::new(&text, PopupSize::Percentage(65, 25))
-                .bg(Color::Yellow)
-                .fg(Color::Black)
+                .bg(app.settings().popup_background.into())
+                .fg(app.settings().popup_foreground.into())
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
@@ -66,8 +66,8 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
             let entry = entry.as_ref();
             let text = format!("{}\n{}", entry.description_short, entry.description);
             let popup = SimplePopup::new(&text, PopupSize::Percentage(55, 65))
-                .fg(Color::Black)
-                .bg(Color::Yellow)
+                .bg(app.settings().popup_background.into())
+                .fg(app.settings().popup_foreground.into())
                 .wrap()
                 .scroll_to(app.popup_scroll().get_scroll())
                 .block(
@@ -84,10 +84,13 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
         LookupResult::Completion(entries) => {
             let lines: Vec<String> = entries.iter().map(|e| e.name.to_owned()).collect();
             let popup = VecPopup::new(&lines, PopupSize::Percentage(55, 75))
-                .bg(Color::Yellow)
-                .fg(Color::Black)
+                .bg(app.settings().popup_background.into())
+                .fg(app.settings().popup_foreground.into())
                 .scroll_to(app.popup_scroll().get_scroll())
-                .highlight(app.popup_scroll().get_line(), Color::Black)
+                .highlight(
+                    app.popup_scroll().get_line(),
+                    app.settings().popup_foreground.into(),
+                )
                 .block(
                     Block::default()
                         .title(format!("{} results found", entries.len()))
@@ -102,9 +105,12 @@ fn show_lookup(f: &mut Frame, app: &mut App) {
         }
         LookupResult::Files(files) => {
             let popup = VecPopup::new(files, PopupSize::Percentage(55, 75))
-                .bg(Color::Yellow)
-                .fg(Color::Black)
-                .highlight(app.popup_scroll().get_line(), Color::Black)
+                .bg(app.settings().popup_background.into())
+                .fg(app.settings().popup_foreground.into())
+                .highlight(
+                    app.popup_scroll().get_line(),
+                    app.settings().popup_foreground.into(),
+                )
                 .scroll_to(app.popup_scroll().get_scroll())
                 .block(
                     Block::default()
@@ -156,9 +162,12 @@ fn show_spell_slots(app: &mut App, f: &mut Frame) {
     };
 
     let popup = VecPopup::new(&lines, PopupSize::Absolute(13, 11))
-        .fg(Color::Black)
-        .bg(Color::Yellow)
-        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .bg(app.settings().popup_background.into())
+        .fg(app.settings().popup_foreground.into())
+        .highlight(
+            app.popup_scroll().get_line(),
+            app.settings().popup_foreground.into(),
+        )
         .alignment(Alignment::Center)
         .block(
             Block::default()
@@ -183,9 +192,12 @@ fn show_funds(app: &mut App, f: &mut Frame) {
         .collect();
 
     let popup = VecPopup::new(&lines, PopupSize::Absolute(12, 8))
-        .fg(Color::Black)
-        .bg(Color::Yellow)
-        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .bg(app.settings().popup_background.into())
+        .fg(app.settings().popup_foreground.into())
+        .highlight(
+            app.popup_scroll().get_line(),
+            app.settings().popup_foreground.into(),
+        )
         .alignment(Alignment::Center)
         .block(
             Block::default()
@@ -205,8 +217,8 @@ fn show_free_lookup_prompt(app: &mut App, f: &mut Frame) {
         &app.lookup_buffer,
         PopupSize::Absolute(f.size().width - 10, 3),
     )
-    .fg(Color::Black)
-    .bg(Color::Yellow)
+    .bg(app.settings().popup_background.into())
+    .fg(app.settings().popup_foreground.into())
     .block(
         Block::default()
             .title("Lookup")
@@ -228,10 +240,13 @@ fn show_proficiencies(app: &mut App, f: &mut Frame) {
         .collect();
 
     let popup = VecPopup::new(&lines, PopupSize::Percentage(35, 55))
-        .bg(Color::Yellow)
-        .fg(Color::Black)
+        .bg(app.settings().popup_background.into())
+        .fg(app.settings().popup_foreground.into())
         .scroll_to(app.popup_scroll().get_scroll())
-        .highlight(app.popup_scroll().get_line(), Color::Black)
+        .highlight(
+            app.popup_scroll().get_line(),
+            app.settings().popup_foreground.into(),
+        )
         .block(
             Block::default()
                 .title("Proficiencies")
@@ -251,8 +266,8 @@ fn show_error_popup(app: &mut App, f: &mut Frame) {
             .expect("cannot show error popup with no error message"),
         PopupSize::Percentage(75, 75),
     )
-    .bg(Color::Yellow)
-    .fg(Color::Black)
+    .bg(app.settings().popup_background.into())
+    .fg(app.settings().popup_foreground.into())
     .scroll_to(app.popup_scroll().get_line())
     .wrap()
     .block(
@@ -314,49 +329,80 @@ fn draw_static_widgets(app: &mut App, f: &mut Frame) {
     let (player_rect, info_rect, stat_rect, tab_rect) = layouts(f.size());
 
     // Render player bar
-    let player_bar = PlayerBar::new(&app.player).editing(app.editing).highlight(
-        if let Some(Selected::TopBarItem) = app.selected {
-            Some(app.index as u8)
-        } else {
-            None
-        },
-    );
+    let mut player_bar = PlayerBar::new(&app.player)
+        .fg(app.settings().foreground.into())
+        .bg(app.settings().background.into());
+    if let Some(Selected::TopBarItem) = app.selected {
+        player_bar = player_bar.highlight(
+            app.index as u8,
+            if app.editing {
+                app.settings().highlight.into()
+            } else {
+                app.settings().foreground.into()
+            },
+        )
+    }
     f.render_widget(player_bar, player_rect);
 
     // Render stat block
-    let stat_block = StatBlock::new(&app.player.stats)
-        .editing(app.editing)
-        .highlight(if let Some(Selected::StatItem) = app.selected {
-            Some(app.index as u8)
-        } else {
-            None
-        });
+    let mut stat_block = StatBlock::new(&app.player.stats)
+        .fg(app.settings().foreground.into())
+        .bg(app.settings().background.into());
+    if let Some(Selected::StatItem) = app.selected {
+        stat_block = stat_block.highlight(
+            app.index as u8,
+            if app.editing {
+                app.settings().highlight.into()
+            } else {
+                app.settings().foreground.into()
+            },
+        )
+    }
     f.render_widget(stat_block, stat_rect);
 
     // Render player info bar
-    let info_bar = InfoBar::new(&app.player).editing(app.editing).highlight(
-        if let Some(Selected::InfoItem) = app.selected {
-            Some(app.index as u8)
-        } else {
-            None
-        },
-    );
+    let mut info_bar = InfoBar::new(&app.player)
+        .fg(app.settings().foreground.into())
+        .bg(app.settings().background.into());
+    if let Some(Selected::InfoItem) = app.selected {
+        info_bar = info_bar.highlight(
+            app.index as u8,
+            if app.editing {
+                app.settings().highlight.into()
+            } else {
+                app.settings().foreground.into()
+            },
+        )
+    }
     f.render_widget(info_bar, info_rect);
 
     // Render the tab panel
-    let tab_block = TabPanel::new(&app.player, app.current_tab)
-        .scroll(app.tab_scroll().get_scroll() as u16)
-        .editing(app.editing)
-        .highlight(if let Some(Selected::TabItem) = app.selected {
-            Some(app.tab_scroll().get_line() as u16)
-        } else {
-            None
-        });
+    let mut tab_block = TabPanel::new(&app.player, app.current_tab)
+        .fg(app.settings().foreground.into())
+        .bg(app.settings().background.into())
+        .select(app.settings().tab_select.into())
+        .scroll(app.tab_scroll().get_scroll() as u16);
+    if let Some(Selected::TabItem) = app.selected {
+        tab_block = tab_block.highlight(
+            app.tab_scroll().get_line() as u16,
+            if app.editing {
+                app.settings().highlight.into()
+            } else {
+                app.settings().foreground.into()
+            },
+        )
+    }
     f.render_widget(tab_block, tab_rect);
+}
+
+fn draw_background_color(app: &mut App, f: &mut Frame) {
+    let b = Block::default().style(Style::default().bg(app.settings().background.into()));
+    f.render_widget(b, f.size())
 }
 
 /// Render all ui widgets using the data located in `app`.
 pub fn render(app: &mut App, f: &mut Frame) {
+    draw_background_color(app, f);
     draw_static_widgets(app, f);
 
     match app.selected {

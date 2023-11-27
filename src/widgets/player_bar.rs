@@ -1,20 +1,20 @@
 use ratatui::{
     layout::Alignment,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{player::Player, widgets::separator};
+use crate::player::Player;
 
 /// A widget that renders the top player bar.
 pub struct PlayerBar<'a> {
     /// The bound player.
     player: &'a Player,
     /// Which item to highlight, if any.
-    highlight: Option<u8>,
-    /// Whether that app is editing.
-    editing: bool,
+    highlight: Option<(u8, Color)>,
+    fg: Color,
+    bg: Color,
 }
 
 impl<'a> PlayerBar<'a> {
@@ -23,46 +23,54 @@ impl<'a> PlayerBar<'a> {
         Self {
             player,
             highlight: None,
-            editing: false,
+            fg: Color::Yellow,
+            bg: Color::Black,
         }
     }
 
     /// Set which item to highlight, if any.
-    pub fn highlight(mut self, item: Option<u8>) -> Self {
-        self.highlight = item;
+    pub fn highlight(mut self, item: u8, color: Color) -> Self {
+        self.highlight = Some((item, color));
         self
     }
 
-    /// Set whether to display the highlight using standard or editing colors.
-    pub fn editing(mut self, editing: bool) -> Self {
-        self.editing = editing;
+    /// Set the foreground color of the widget
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg = color;
         self
+    }
+
+    /// Set the background color of the widget
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg = color;
+        self
+    }
+
+    pub fn style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
     }
 }
 
 impl<'a> Widget for PlayerBar<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let mut items = vec![
-            Span::from(format!("Name: {: <5}", self.player.name)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("(R)ace: {: <10}", self.player.race)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("Level: {: <2}", self.player.level)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("(C)lass: {: <10}", self.player.class)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("Alignment: {: <2}", self.player.alignment)).yellow(),
+            Span::styled(format!("Name: {: <5}", self.player.name), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("(R)ace: {: <10}", self.player.race), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("Level: {: <2}", self.player.level), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("(C)lass: {: <10}", self.player.class), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(
+                format!("Alignment: {: <2}", self.player.alignment),
+                self.style(),
+            ),
         ];
 
-        if let Some(item) = self.highlight {
+        if let Some((item, color)) = self.highlight {
             // Actual item and '|' separator make stride of 2.
-            items[item as usize * 2].patch_style(Style::default().fg(Color::Black).bg(
-                if self.editing {
-                    Color::LightGreen
-                } else {
-                    Color::Yellow
-                },
-            ));
+            items[item as usize * 2].patch_style(Style::default().fg(Color::Black).bg(color));
         }
 
         Paragraph::new(vec![Line::from(items)])
@@ -70,7 +78,8 @@ impl<'a> Widget for PlayerBar<'a> {
                 Block::new()
                     .title("Player Sheet (u)")
                     .title_alignment(Alignment::Center)
-                    .borders(Borders::ALL),
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.fg)),
             )
             .alignment(Alignment::Center)
             .render(area, buf)

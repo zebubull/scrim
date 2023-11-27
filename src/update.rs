@@ -250,7 +250,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 }
                 KeyCode::Tab | KeyCode::Enter => {
                     app.current_lookup =
-                        Some(app.get_completion(&app.lookup_buffer.clone(), lookup));
+                        Some(app.get_completion(&app.lookup_buffer.clone(), lookup)?);
                     app.selected = Some(Selected::FreeLookupSelect);
                 }
                 _ => {}
@@ -298,7 +298,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                         app.player.skills[idx as usize] = ProficiencyLevel::Double
                     }
                     KeyCode::Char('h') => app.player.skills[idx as usize] = ProficiencyLevel::Half,
-                    KeyCode::Char('q') | KeyCode::Enter => {
+                    KeyCode::Char('q') | KeyCode::Esc => {
                         app.selected = None;
                         app.current_lookup = None;
                     }
@@ -310,7 +310,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
                 KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
                 KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
-                KeyCode::Char('q') => {
+                KeyCode::Char('q') | KeyCode::Esc => {
                     app.selected = None;
                     app.current_lookup = None;
                 }
@@ -334,7 +334,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                 KeyCode::Char('j') => app.popup_scroll_mut().scroll_down(1),
                 KeyCode::Char('K') => app.popup_scroll_mut().scroll_up(10),
                 KeyCode::Char('J') => app.popup_scroll_mut().scroll_down(10),
-                KeyCode::Char('q') | KeyCode::Enter => {
+                KeyCode::Char('q') | KeyCode::Esc => {
                     app.current_lookup = None;
                     app.selected = None;
                     app.error = None;

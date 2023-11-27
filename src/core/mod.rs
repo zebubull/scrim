@@ -1,15 +1,24 @@
 mod scroll_provider;
 
-use std::{path::PathBuf, rc::Rc};
+/// App settings
+pub mod settings;
+
+use std::{
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use crate::{
     lookup::{Lookup, LookupEntry},
     player::Player,
 };
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{Report, Result};
 use strum_macros::Display;
 
-use self::scroll_provider::ScrollProvider;
+use self::{
+    scroll_provider::ScrollProvider,
+    settings::{SaveFormat, Settings},
+};
 
 /// An enum that represents a control as well as an index into that control's values, if it has any.
 #[derive(Clone, Copy)]
@@ -110,6 +119,7 @@ pub struct App {
     pub error: Option<String>,
     tab_scroll_provider: ScrollProvider,
     popup_scroll_provider: ScrollProvider,
+    settings: Settings,
 }
 
 impl App {
@@ -142,13 +152,27 @@ impl App {
     /// Will either save to the current player path or,
     /// if it doesn't exist, a new file with the same name as the player.
     pub fn save_player(&self) -> Result<()> {
-        let data = serde_json::to_string(&self.player)?;
-        let path = match self.path.as_ref() {
-            Some(path) => path.to_owned(),
-            None => PathBuf::from(&format!("{}.player", self.player.name)),
+        let data = match self.settings.format {
+            SaveFormat::JSON => serde_json::to_string(&self.player)?,
+            SaveFormat::YAML => serde_yaml::to_string(&self.player)?,
         };
 
-        std::fs::write(path, data)?;
+        let path = match self.path.as_ref() {
+            Some(path) => path
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap_or_default()
+                .to_owned(),
+            None => self.player.name.to_owned(),
+        };
+
+        let ext = match self.settings.format {
+            SaveFormat::JSON => "json",
+            SaveFormat::YAML => "yaml",
+        };
+
+        std::fs::write(format!("{}.{}", path, ext), data)?;
         Ok(())
     }
 
@@ -186,6 +210,20 @@ impl App {
     /// Returns a mutable reference to the popup scroll provider
     pub fn popup_scroll_mut(&mut self) -> &mut ScrollProvider {
         &mut self.popup_scroll_provider
+    }
+
+    /// Returns a reference to the app settings
+    pub fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    /// Attempt to load app settings from the given file.
+    ///
+    /// On failure, returns the error report and uses default settings. On success, returns None.
+    pub fn load_settings(&mut self, path: &Path) -> Option<Report> {
+        let (s, err) = Settings::load_or_default(path);
+        self.settings = s;
+        err
     }
 
     /// Returns a reference to the data of the currently selected tab.
@@ -303,14 +341,10 @@ impl App {
 
     /// Try to lookup the given text
     fn lookup_text(&mut self, lookup: &mut Lookup, text: &str) -> Result<()> {
-        if !lookup.loaded {
-            lookup.load()?;
-        }
-
         let lookup = lookup.get_entry(text);
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
-        self.current_lookup = match lookup {
+        self.current_lookup = match lookup? {
             Some(entry) => {
                 self.popup_scroll_provider.clear_max();
                 Some(LookupResult::Success(entry.clone()))
@@ -332,11 +366,17 @@ impl App {
 
         let names: Vec<String> = files
             .map(|f| f.unwrap().path())
-            .filter(|f| f.is_file() && f.extension().unwrap_or_default() == "player")
+            .filter(|f| {
+                f.is_file()
+                    && (f.extension().unwrap_or_default() == "player"
+                        || f.extension().unwrap_or_default() == "json"
+                        || f.extension().unwrap_or_default() == "yaml")
+            })
             .map(|f| f.to_str().unwrap_or(&f.to_string_lossy()).to_owned())
             .collect();
 
         self.selected = Some(Selected::Load);
+        self.popup_scroll_provider.set_max(names.len() as u32);
         self.current_lookup = Some(LookupResult::Files(names));
         self.popup_scroll_provider.reset();
 
@@ -344,11 +384,11 @@ impl App {
     }
 
     /// Get all completions for the currently selected tab item
-    pub fn complete_current_selection(&mut self, lookup: &Lookup) -> Result<()> {
+    pub fn complete_current_selection(&mut self, lookup: &mut Lookup) -> Result<()> {
         let item = self.tab_scroll_provider.get_line();
         let tab = self.current_tab();
 
-        let result = self.get_completion(&tab[item as usize].clone(), lookup);
+        let result = self.get_completion(&tab[item as usize].clone(), lookup)?;
 
         self.selected = Some(Selected::ItemLookup(item));
         self.current_lookup = Some(result);
@@ -357,18 +397,18 @@ impl App {
     }
 
     /// Get the completion result for the provided text
-    pub fn get_completion(&mut self, text: &str, lookup: &Lookup) -> LookupResult {
+    pub fn get_completion(&mut self, text: &str, lookup: &mut Lookup) -> Result<LookupResult> {
         let text = text.trim().to_ascii_lowercase();
-        let lookup = lookup.get_completions(&text);
+        let lookup = lookup.get_completions(&text)?;
 
         // Probably shouldn't clone but the lifetimes were too confusing :(
-        if !lookup.is_empty() {
+        Ok(if !lookup.is_empty() {
             self.popup_scroll_provider.set_max(lookup.len() as u32);
             LookupResult::Completion(lookup)
         } else {
             self.popup_scroll_provider.set_max(1);
             LookupResult::Invalid(text.clone())
-        }
+        })
     }
 
     /// Complete the current text using the current selection

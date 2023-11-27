@@ -1,6 +1,6 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
 };
@@ -14,11 +14,12 @@ pub struct TabPanel<'a> {
     /// The tab to display
     tab: Tab,
     /// Which line to highlight, if any.
-    highlight: Option<u16>,
-    /// Whether editing mode is enabled.
-    editing: bool,
+    highlight: Option<(u16, Color)>,
     /// The amount of lines to scroll the viewport by.
     scroll: u16,
+    fg: Color,
+    bg: Color,
+    select: Color,
 }
 
 impl<'a> TabPanel<'a> {
@@ -27,20 +28,16 @@ impl<'a> TabPanel<'a> {
             player,
             tab,
             highlight: None,
-            editing: false,
             scroll: 0,
+            fg: Color::Yellow,
+            bg: Color::Black,
+            select: Color::White,
         }
     }
 
     /// Set the highlighted line.
-    pub fn highlight(mut self, item: Option<u16>) -> Self {
-        self.highlight = item;
-        self
-    }
-
-    /// Set whether to display the highlight using standard or editing colors.
-    pub fn editing(mut self, editing: bool) -> Self {
-        self.editing = editing;
+    pub fn highlight(mut self, item: u16, color: Color) -> Self {
+        self.highlight = Some((item, color));
         self
     }
 
@@ -48,6 +45,28 @@ impl<'a> TabPanel<'a> {
     pub fn scroll(mut self, scroll: u16) -> Self {
         self.scroll = scroll;
         self
+    }
+
+    /// Set the foreground color of the widget
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg = color;
+        self
+    }
+
+    /// Set the background color of the widget
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg = color;
+        self
+    }
+
+    /// Set the tab select color of the widget
+    pub fn select(mut self, color: Color) -> Self {
+        self.select = color;
+        self
+    }
+
+    pub fn style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
     }
 }
 
@@ -79,36 +98,30 @@ impl<'a> Widget for TabPanel<'a> {
 
         let mut tab_view = VecView::from(tab.as_slice())
             .alignment(Alignment::Left)
-            .fg(Color::Yellow)
-            .bg(Color::Black)
+            .fg(self.fg)
+            .bg(self.bg)
             .scroll_to(self.scroll as u32)
             .block(
                 Block::default()
                     .title(format!("{} (t)", self.tab))
-                    .borders(Borders::ALL),
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.fg)),
             );
 
-        if let Some(item) = self.highlight {
+        if let Some((item, color)) = self.highlight {
             if !tab.is_empty() {
-                tab_view = tab_view.highlight(
-                    item as u32,
-                    if self.editing {
-                        Color::Green
-                    } else {
-                        Color::Yellow
-                    },
-                );
+                tab_view = tab_view.highlight(item as u32, color);
             }
         }
 
         tab_view.render(content_chunk, buf);
 
         let mut text = vec![
-            Span::from("NOTES").white(),
+            Span::styled("NOTES", Style::default().fg(self.fg).bg(self.bg)),
             Span::from("   "),
-            Span::from("INVENTORY").white(),
+            Span::styled("INVENTORY", Style::default().fg(self.fg).bg(self.bg)),
             Span::from("   "),
-            Span::from("SP(E)LLS").white(),
+            Span::styled("SP(E)LLS", Style::default().fg(self.fg).bg(self.bg)),
         ];
 
         let idx = match self.tab {
@@ -119,11 +132,11 @@ impl<'a> Widget for TabPanel<'a> {
 
         text[idx].patch_style(
             Style::default()
-                .fg(Color::Black)
+                .fg(self.bg)
                 .bg(if self.highlight.is_some() {
-                    Color::Yellow
+                    self.select
                 } else {
-                    Color::White
+                    self.fg
                 }),
         );
 
@@ -142,6 +155,10 @@ impl<'a> Widget for TabPanel<'a> {
             format!("{}%", self.scroll * 100 / (len - height))
         };
 
-        Paragraph::new(vec![Line::from(Span::from(text).white())]).render(scroll_chunk, buf);
+        Paragraph::new(vec![Line::from(Span::styled(
+            text,
+            Style::default().bg(self.bg).fg(self.select),
+        ))])
+        .render(scroll_chunk, buf);
     }
 }

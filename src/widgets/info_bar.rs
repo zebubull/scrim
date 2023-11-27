@@ -1,20 +1,20 @@
 use ratatui::{
     layout::Alignment,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{player::Player, widgets::separator};
+use crate::player::Player;
 
 /// A widget to display the player info bar.
 pub struct InfoBar<'a> {
     /// The bound player.
     player: &'a Player,
     /// Which item to highlight, if any.
-    highlight: Option<u8>,
-    /// Whether the app is editing.
-    editing: bool,
+    highlight: Option<(u8, Color)>,
+    fg: Color,
+    bg: Color,
 }
 
 impl<'a> InfoBar<'a> {
@@ -23,58 +23,68 @@ impl<'a> InfoBar<'a> {
         Self {
             player,
             highlight: None,
-            editing: false,
+            fg: Color::Yellow,
+            bg: Color::Black,
         }
     }
 
     /// Set which item to highlight, if any.
-    pub fn highlight(mut self, item: Option<u8>) -> Self {
-        self.highlight = item;
+    pub fn highlight(mut self, item: u8, color: Color) -> Self {
+        self.highlight = Some((item, color));
         self
     }
 
-    /// Set whether to display the highlight using standard or editing colors.
-    pub fn editing(mut self, editing: bool) -> Self {
-        self.editing = editing;
+    /// Set the foreground color of the widget
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg = color;
         self
+    }
+
+    /// Set the background color of the widget
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg = color;
+        self
+    }
+
+    pub fn style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
     }
 }
 
 impl<'a> Widget for InfoBar<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let mut line = Line::from(vec![
-            Span::from(format!("HP: {}", self.player.hp)).yellow(),
-            Span::from("/").yellow(),
-            Span::from(format!("{}", self.player.max_hp)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("Temp HP: {}", self.player.temp_hp)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("AC: {}", self.player.ac)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("Prof: {:+}", self.player.prof_bonus)).yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!(
-                "Hit dice: {}d{}",
-                self.player.hit_dice_remaining, self.player.hit_dice
-            ))
-            .yellow(),
-            separator!(Color::Yellow),
-            Span::from(format!("Background: {}", self.player.background)).yellow(),
-            separator!(Color::Yellow),
-            Span::from("(F)unds").yellow(),
-            separator!(Color::Yellow),
-            Span::from("(P)roficiencies").yellow(),
+            Span::styled(format!("HP: {}", self.player.hp), self.style()),
+            Span::styled("/", self.style()),
+            Span::styled(format!("{}", self.player.max_hp), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("Temp HP: {}", self.player.temp_hp), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("AC: {}", self.player.ac), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(format!("Prof: {:+}", self.player.prof_bonus), self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled(
+                format!(
+                    "Hit dice: {}d{}",
+                    self.player.hit_dice_remaining, self.player.hit_dice
+                ),
+                self.style(),
+            ),
+            Span::styled(" | ", self.style()),
+            Span::styled(
+                format!("Background: {}", self.player.background),
+                self.style(),
+            ),
+            Span::styled(" | ", self.style()),
+            Span::styled("(F)unds", self.style()),
+            Span::styled(" | ", self.style()),
+            Span::styled("(P)roficiencies", self.style()),
         ]);
 
-        if let Some(item) = self.highlight {
+        if let Some((item, color)) = self.highlight {
             // Actual item and '|' separator make stride of 2.
-            line.spans[item as usize * 2].patch_style(Style::default().fg(Color::Black).bg(
-                if self.editing {
-                    Color::LightGreen
-                } else {
-                    Color::Yellow
-                },
-            ));
+            line.spans[item as usize * 2].patch_style(Style::default().fg(self.bg).bg(color));
         }
 
         Paragraph::new(vec![line])
@@ -82,7 +92,8 @@ impl<'a> Widget for InfoBar<'a> {
                 Block::new()
                     .title("Info (i)")
                     .title_alignment(Alignment::Center)
-                    .borders(Borders::ALL),
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.fg)),
             )
             .alignment(Alignment::Left)
             .render(area, buf);

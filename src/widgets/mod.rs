@@ -13,15 +13,7 @@ pub mod vec_popup;
 /// Widget that displays the contents of a vector
 pub mod vec_view;
 
-macro_rules! separator {
-    ($color: expr) => {
-        Span::styled(" | ", Style::default().fg($color))
-    };
-}
-
 pub enum PopupSize {
     Percentage(u16, u16),
     Absolute(u16, u16),
 }
-
-pub(crate) use separator;

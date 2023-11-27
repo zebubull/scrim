@@ -127,6 +127,8 @@ impl<'a> Widget for SimplePopup<'a> {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
         let chunk = self.rect(area);
 
+        // Clear widget does not properly set background color, so this will have to do for now.
+        // Not necessarily the fastest but oh well :p
         let clear_string = " ".repeat(chunk.width as usize);
         for y in chunk.top()..chunk.bottom() {
             buf.set_string(chunk.x, y, &clear_string, self.style())

@@ -46,7 +46,7 @@ impl Lookup {
     /// Load all lookup tables located in the directory specified by the load path.
     pub fn load(&mut self) -> Result<()> {
         if self.loaded {
-            return Ok(())
+            return Ok(());
         }
         let files = std::fs::read_dir(self.load_path.as_path()).wrap_err_with(|| {
             format!(
@@ -96,14 +96,22 @@ impl Lookup {
     }
 
     /// Get the lookup entry with the current name, if it exists.
-    pub fn get_entry(&self, name: &str) -> Option<&Rc<LookupEntry>> {
-        self.entries.get(&name.to_lowercase())
+    pub fn get_entry(&mut self, name: &str) -> Result<Option<&Rc<LookupEntry>>> {
+        if !self.loaded {
+            self.load()?;
+        }
+
+        Ok(self.entries.get(&name.to_lowercase()))
     }
 
     /// Search the lookup table for all possible completions for the given text
-    pub fn get_completions(&self, text: &str) -> Vec<Rc<LookupEntry>> {
+    pub fn get_completions(&mut self, text: &str) -> Result<Vec<Rc<LookupEntry>>> {
+        if !self.loaded {
+            self.load()?;
+        }
         let text = text.trim_start().to_lowercase();
-        self.entries
+        Ok(self
+            .entries
             .iter()
             .filter_map(|(k, v)| {
                 if k.starts_with(&text) {
@@ -111,6 +119,6 @@ impl Lookup {
                 }
                 None
             })
-            .collect()
+            .collect())
     }
 }
