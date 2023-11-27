@@ -4,6 +4,10 @@
   - [Navigation](#navigation)
   - [Autocomplete and Lookups](#autocomplete-and-lookups)
     - [Adding Lookups](#adding-lookups)
+  - [Configuration](#configuration)
+    - [Save Format](#save-format)
+    - [Colors](#colors)
+    - [Example Config](#example-config)
   - [Notes](#notes)
 
 # scrim 
@@ -40,7 +44,8 @@ Fortunately, most selectable controls will have the shortcut that selects them p
 
 ## Navigation
 - `h`, `l` - navigate left and right in the current widget.
-- `j`, `k` - navigate up and dowwn in the current pane. If no pane is selected, this will scroll the current tab pane. If editing mode is engaged, this will scroll through numerical values and other values such as the player class, race, background, and alignment.
+- `k`, `j` - navigate up and down in the current pane. If no pane is selected, this will scroll the current tab pane. If editing mode is engaged, this will scroll through numerical values and other values such as the player class, race, background, and alignment.
+- `shift+k`, `shift+j` - navigate up and down 10 lines at once. If no pane is selected, this will scroll the current tab pane. 
 - `tab` - while typing, access the autocomplete menu. If used in the free lookup box functions identically to pressing enter.
 - `enter` - enter editing mode or select an item from a list.
 - `a`, `x` - increase and decrease values in certain panes, namely money and spell slots remaining.
@@ -59,6 +64,45 @@ Lookups are stored in the `JSON` file format and should be placed in the appropr
 - `description`: the full body of the entry.
 
 Due to the limitations of the `JSON` format, every field must be containted on one line, so manually escaped `\n` newlines will have to be used in place. This is unfortunate but will be necessary unless a different file format is chosen, which is highly unlikely.
+
+## Configuration
+Scrim supports (some) amount of UX configuration to allow the user to tailor the app experience to their needs. Configuration settings are located in `config.yaml` in the `.scrim` folder in the user's home directory. A basic `config.yaml` that contains all default fields will be generated if one cannot be found.
+
+### Save Format
+The `format` field can contain either `YAML` or `JSON`. All players will be saved with the specified format, but either format can be loaded.
+
+### Colors
+The default colors `Black`, `Red`, `Green`, `Yellow`, `Blue`, `Magenta`, `Cyan`, `Gray`, `DarkGray`, `LightRed`, `LightGreen`, `LightYellow`, `LightBlue`, `LightMagenta`, `LightCyan`, and `LightGray` are available, as well as 24-bit RGB and 8-bit Indexed options.
+
+### Example Config
+An example config that saves to the JSON format and has a custom RGB color palette.
+```yaml
+format: JSON
+background: !Rgb
+- 33
+- 10
+- 78
+foreground: !Rgb
+- 91
+- 176
+- 155
+popup_background: !Rgb
+- 91
+- 176
+- 155
+popup_foreground: !Rgb
+- 33
+- 10
+- 78
+highlight: !Rgb
+- 201
+- 60
+- 100
+tab_select: !Rgb
+- 64
+- 145
+- 23
+```
 
 ## Notes
 - If a pane is selected, the currently selected pane item will be highlighted in yellow. If an item is selected and is currently being edited, it will be highlighted in green.
