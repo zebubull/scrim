@@ -195,14 +195,11 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                     }
                 }
                 KeyCode::Char('x') => {
-                    if app.index > 0 {
-                        let index = app.index as usize;
-                        if index < app.current_tab().len() {
-                            let line = app.tab_scroll().get_line() as usize;
-                            app.current_tab_mut()[line].remove( index);
-                            app.index = index.saturating_sub(1).min(app.current_tab()[line].len()) as u32;
-                        }
-                        app.index -= 1;
+                    let line = app.tab_scroll().get_line() as usize;
+                    let index = app.index as usize;
+                    if app.current_tab()[line].len() > 0 && index < app.current_tab()[line].len() {
+                        app.current_tab_mut()[line].remove(index);
+                        app.index = index.min(app.current_tab()[line].len()) as u32;
                     }
                 }
                 KeyCode::Enter if !app.current_tab().is_empty() => {
