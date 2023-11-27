@@ -98,7 +98,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             format: SaveFormat::YAML,
-            background: TermColor::Yellow,
+            background: TermColor::Black,
             foreground: TermColor::Yellow,
             popup_background: TermColor::Yellow,
             popup_foreground: TermColor::Black,
