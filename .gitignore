@@ -1,6 +1,6 @@
 **/target
 *.player
-**/.DS_STORE
+**/.DS_Store
 .vscode/
 *.yaml
 *.json
