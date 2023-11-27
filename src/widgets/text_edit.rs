@@ -88,8 +88,8 @@ where
 
         p.render(area, buf);
 
-        if let Some(((col, line), color)) = self.highlight {
-            buf.get_mut(line.saturating_sub(self.scroll as u16) + area.x + 1, col as u16 + area.y + 1).set_bg(color).set_fg(self.bg);
+        if let Some(((line, col), color)) = self.highlight {
+            buf.get_mut(col as u16 + area.x + 1, line.saturating_sub(self.scroll as u16) + area.y + 1).set_bg(color).set_fg(self.bg);
         }
     }
 }

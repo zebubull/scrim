@@ -251,6 +251,8 @@ impl App {
         self.current_tab = tab;
         self.tab_scroll_provider
             .set_max(self.current_tab().len() as u32);
+        let line = self.tab_scroll_provider.get_line() as usize;
+        self.index = self.index.min(self.current_tab()[line].len() as u32);
     }
 
     /// Scroll the current tab up by the specified number of lines.

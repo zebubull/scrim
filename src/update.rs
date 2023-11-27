@@ -37,20 +37,28 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
             Some(ControlType::TextInput(text)) => {
                 match key_event.code {
                     KeyCode::Backspace => {
-                        if index > 0 {
-                            text.remove(index - 1);
-                            app.index -= 1;
+                        if in_tab {
+                            if index > 0 {
+                                text.remove(index - 1);
+                                app.index -= 1;
+                            }
+                        } else {
+                            text.pop();
                         }
                     }
                     KeyCode::Char(c) => {
-                        if index == text.len() {
-                            text.push(c)
+                        if in_tab {
+                            if index == text.len() {
+                                text.push(c)
+                            } else {
+                                text.insert(index, c);
+                            }
+                            app.index += 1;
                         } else {
-                            text.insert(index, c);
+                            text.push(c);
                         }
-                        app.index += 1;
                     }
-                    KeyCode::Tab if !app.current_tab().is_empty() => {
+                    KeyCode::Tab if !app.current_tab().is_empty() && in_tab => {
                         if let Some(Selected::TabItem) = app.selected {
                             app.complete_current_selection(lookup)?;
                             app.selected = Some(Selected::Completion(app.tab_scroll().get_line()));
@@ -59,7 +67,7 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                     }
                     KeyCode::Enter => {
                         let line = app.tab_scroll().get_line() as usize;
-                        if app.index as usize >= app.current_tab()[line].len() - 1 {
+                        if app.index > 0 && app.index as usize >= app.current_tab()[line].len() - 1 {
                             app.append_item_to_tab();
                         } else {
                             app.append_item_to_tab();
@@ -200,6 +208,13 @@ pub fn update(app: &mut App, lookup: &mut Lookup, key_event: KeyEvent) -> Result
                     if app.current_tab()[line].len() > 0 && index < app.current_tab()[line].len() {
                         app.current_tab_mut()[line].remove(index);
                         app.index = index.min(app.current_tab()[line].len()) as u32;
+                    } else if app.current_tab()[line].len() == 0 {
+                        app.delete_item_from_tab();
+                        if app.current_tab().len() > 0 {
+                            app.index = (app.index).min(app.current_tab()[app.tab_scroll().get_line() as usize].len() as u32);
+                        } else {
+                            app.index = 0;
+                        }
                     }
                 }
                 KeyCode::Enter if !app.current_tab().is_empty() => {
